@@ -9,30 +9,130 @@
   body { background:#0e0818; overflow:hidden; font-family:'Courier New',monospace; }
   canvas { display:block; }
 
-  #intro {
+  /* ── LANDING SCREEN ── */
+  #landing {
     position:fixed; inset:0;
     background:radial-gradient(ellipse at 50% 70%, #e8704a 0%, #7a2a9a 45%, #2d0d54 100%);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    z-index:200; gap:18px; text-align:center; padding:24px;
+    z-index:200; gap:0; text-align:center; padding:24px;
+    transition: opacity .5s;
   }
-  #intro h1 {
-    font-size:clamp(24px,5vw,50px); font-weight:900; color:#ffcc44;
+  #landing h1 {
+    font-size:clamp(28px,5vw,56px); font-weight:900; color:#ffcc44;
     text-shadow:0 0 30px #ffaa2288, 0 0 60px #ff880055;
     letter-spacing:4px; text-transform:uppercase;
+    margin-bottom:8px;
   }
-  #intro p { color:#c4956a; font-size:14px; max-width:360px; line-height:1.8; letter-spacing:1px; }
-  #start-btn {
-    margin-top:10px; background:transparent;
-    border:2px solid #ffaa44; color:#ffcc66; font-weight:900; font-size:13px;
-    padding:13px 40px; cursor:pointer; letter-spacing:3px; text-transform:uppercase;
+  #landing .tagline {
+    color:#c4956a; font-size:13px; letter-spacing:2px;
+    margin-bottom:52px; text-transform:uppercase;
+  }
+  .landing-options {
+    display:flex; gap:20px; align-items:stretch; flex-wrap:wrap; justify-content:center;
+  }
+  .landing-opt {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; padding:32px 36px; cursor:pointer;
+    background:rgba(0,0,0,0.28); border:1px solid rgba(255,180,80,0.22);
+    transition:all .22s; min-width:180px;
     font-family:'Courier New',monospace;
-    box-shadow:0 0 20px #ff880033, inset 0 0 20px #ff660011;
-    transition:all .2s;
   }
-  #start-btn:hover {
-    background:#ff880022;
-    box-shadow:0 0 40px #ffaa4466, inset 0 0 30px #ff660022;
+  .landing-opt:hover {
+    background:rgba(255,150,50,0.12);
+    border-color:rgba(255,180,80,0.6);
+    transform:translateY(-3px);
+    box-shadow:0 8px 32px rgba(255,120,30,0.18);
   }
+  .landing-opt .opt-icon { font-size:28px; opacity:0.85; }
+  .landing-opt .opt-label {
+    font-size:11px; font-weight:700; letter-spacing:3px;
+    text-transform:uppercase; color:#ffcc55;
+  }
+  .landing-opt .opt-desc {
+    font-size:10px; color:#a07850; letter-spacing:1px; line-height:1.6; max-width:160px;
+  }
+  .landing-divider {
+    width:1px; background:rgba(255,180,80,0.18); align-self:stretch; margin:0 4px;
+  }
+
+  /* ── PORTFOLIO MENU SCREEN ── */
+  #portfolio-menu {
+    position:fixed; inset:0;
+    background:#0a0a0a;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    z-index:200; gap:14px; padding:40px 24px;
+    opacity:0; transition:opacity .4s;
+  }
+  #portfolio-menu.visible { opacity:1; }
+  #portfolio-menu h2 {
+    font-size:11px; letter-spacing:4px; color:#444; text-transform:uppercase;
+    margin-bottom:24px; font-family:'Courier New',monospace;
+  }
+  .pm-back {
+    position:absolute; top:24px; left:28px;
+    font-size:11px; letter-spacing:2px; color:#444; text-transform:uppercase;
+    cursor:pointer; font-family:'Courier New',monospace;
+    transition:color .2s;
+    background:none; border:none; padding:0;
+  }
+  .pm-back:hover { color:#aaa; }
+
+  .pm-item {
+    width:100%; max-width:560px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 28px;
+    background:#111;
+    border:1px solid #1a1a1a;
+    cursor:pointer;
+    transition:background .18s, border-color .18s, box-shadow .18s, transform .1s;
+    font-family:'Courier New',monospace;
+    user-select:none;
+    /* press-in effect uses box-shadow as fake depth */
+    box-shadow: 0 6px 0 #000, 0 8px 16px rgba(0,0,0,0.5);
+    position:relative; top:0;
+  }
+  .pm-item:hover {
+    background:#161616;
+  }
+  .pm-item:active, .pm-item.pressed {
+    box-shadow: 0 1px 0 #000, 0 2px 6px rgba(0,0,0,0.4);
+    transform: translateY(5px);
+  }
+  .pm-item-left { display:flex; flex-direction:column; gap:5px; }
+  .pm-item-title {
+    font-size:clamp(16px,2.5vw,22px); font-weight:900;
+    letter-spacing:2px; text-transform:uppercase;
+  }
+  .pm-item-sub {
+    font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    opacity:0.45; color:#fff;
+  }
+  .pm-item-arrow {
+    font-size:18px; opacity:0.3; transition:opacity .18s, transform .18s;
+  }
+  .pm-item:hover .pm-item-arrow { opacity:0.7; transform:translateX(4px); }
+
+  /* Per-item accent colors */
+  .pm-item[data-zone="forge"] { border-left:3px solid #ff6622; }
+  .pm-item[data-zone="forge"] .pm-item-title { color:#ff8844; }
+  .pm-item[data-zone="forge"]:hover { border-color:#ff6622; box-shadow:0 6px 0 #000, 0 8px 24px rgba(255,102,34,0.15); }
+
+  .pm-item[data-zone="spark"] { border-left:3px solid #00ccaa; }
+  .pm-item[data-zone="spark"] .pm-item-title { color:#00eebb; }
+  .pm-item[data-zone="spark"]:hover { border-color:#00ccaa; box-shadow:0 6px 0 #000, 0 8px 24px rgba(0,204,170,0.15); }
+
+  .pm-item[data-zone="bloom"] { border-left:3px solid #0088ff; }
+  .pm-item[data-zone="bloom"] .pm-item-title { color:#22aaff; }
+  .pm-item[data-zone="bloom"]:hover { border-color:#0088ff; box-shadow:0 6px 0 #000, 0 8px 24px rgba(0,136,255,0.15); }
+
+  /* hover opacity effect — items dim when sibling is hovered */
+  #portfolio-menu:has(.pm-item:hover) .pm-item:not(:hover) {
+    opacity: 0.45;
+  }
+  .pm-item { transition:background .18s, border-color .18s, box-shadow .18s, transform .1s, opacity .18s; }
+
+  /* OLD intro — not used anymore, keep shell for startGame() compat */
+  #intro { display:none; }
 
   #controls {
     position:fixed; bottom:20px; right:20px;
@@ -141,11 +241,69 @@
 </head>
 <body>
 
-<div id="intro">
+<!-- ── LANDING SCREEN ── -->
+<div id="landing">
   <h1>Ashwan Kadam</h1>
-  <p>Drive around the planet to explore three areas of practice. Pull up to a district and press Enter to view the work.</p>
-  <button id="start-btn" onclick="startGame()">Explore</button>
+  <p class="tagline">Designer &nbsp;·&nbsp; Educator &nbsp;·&nbsp; Builder</p>
+  <div class="landing-options">
+    <div class="landing-opt" onclick="goInteractive()">
+      <span class="opt-icon">🌍</span>
+      <span class="opt-label">Interactive</span>
+      <span class="opt-desc">Explore the work as a 3D planet</span>
+    </div>
+    <div class="landing-divider"></div>
+    <div class="landing-opt" onclick="goPortfolio()">
+      <span class="opt-icon">📁</span>
+      <span class="opt-label">Portfolio</span>
+      <span class="opt-desc">Jump straight to a discipline</span>
+    </div>
+  </div>
 </div>
+
+<!-- ── PORTFOLIO MENU ── -->
+<div id="portfolio-menu">
+  <button class="pm-back" onclick="goBack()">← Back</button>
+  <h2>Select a discipline</h2>
+
+  <div class="pm-item" data-zone="forge"
+    onclick="openPdfDirect('Portfolio_2026_Forge.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Industrial Design</span>
+      <span class="pm-item-sub">Physical products, prototyping, CMF</span>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+
+  <div class="pm-item" data-zone="spark"
+    onclick="openPdfDirect('Portfolio_PDF_V5_shareable.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Interactive Installation Design</span>
+      <span class="pm-item-sub">Exhibitions, sensor systems, spatial narrative</span>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+
+  <div class="pm-item" data-zone="bloom"
+    onclick="openPdfDirect('Instructional_Design_Portfolio_Final_copy.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Curriculum Design</span>
+      <span class="pm-item-sub">K–12 STEM, e-learning, facilitation</span>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+</div>
+
+<!-- kept for JS compat -->
+<div id="intro"></div>
 
 <canvas id="c"></canvas>
 <div id="vignette"></div>
@@ -1077,11 +1235,53 @@ function loop() {
   catch(e) { cancelAnimationFrame(rafId); console.warn('Loop stopped:', e); }
 }
 
+// ── LANDING NAVIGATION ─────────────────────────────────────────────
+function goInteractive() {
+  const landing = document.getElementById('landing');
+  landing.style.opacity = '0';
+  setTimeout(() => {
+    landing.style.display = 'none';
+    startGame();
+  }, 500);
+}
+
+function goPortfolio() {
+  const landing = document.getElementById('landing');
+  const menu = document.getElementById('portfolio-menu');
+  landing.style.opacity = '0';
+  setTimeout(() => {
+    landing.style.display = 'none';
+    menu.style.display = 'flex';
+    requestAnimationFrame(() => menu.classList.add('visible'));
+  }, 400);
+}
+
+function goBack() {
+  const landing = document.getElementById('landing');
+  const menu = document.getElementById('portfolio-menu');
+  menu.classList.remove('visible');
+  setTimeout(() => {
+    menu.style.display = 'none';
+    landing.style.display = 'flex';
+    requestAnimationFrame(() => { landing.style.opacity = '1'; });
+  }, 400);
+}
+
+function openPdfDirect(pdfFile, el) {
+  // Reuse the existing PDF overlay — just open the matching zone
+  const zone = ZONES.find(z => z.pdf === pdfFile);
+  if (zone) {
+    // Make sure game is at least initialized so overlay works
+    if (!started) { started = true; loop(); }
+    openPanel(zone);
+  }
+}
+
 function startGame() {
   document.getElementById('intro').style.display = 'none';
   if (!started) {
     started = true;
-    if (rafId) cancelAnimationFrame(rafId);  // cancel any stale loop
+    if (rafId) cancelAnimationFrame(rafId);
     loop();
   }
 }
