@@ -1402,38 +1402,47 @@ function _pdfRender() {
       document.getElementById('pdf-zoom-info').textContent =
         Math.round(_pdfZoom * 100) + '%';
 
-      // Render clickable annotation layer (links) on top of the canvas
+      // Render clickable links by manually mapping annotation rects onto the canvas
       const annotDiv = document.getElementById('pdf-annotation-layer');
       annotDiv.innerHTML = '';
       const displayVp = page.getViewport({ scale: _pdfZoom });
       annotDiv.style.width  = displayVp.width  + 'px';
       annotDiv.style.height = displayVp.height + 'px';
-      const linkService = {
-        getDestinationHash: () => '',
-        getAnchorUrl: (url) => url,
-        navigateTo: () => {},
-        addLinkAttributes(link, url) {
-          link.href = url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-        },
-        getExternalLinkTarget: () => 2, // BLANK
-        externalLinkEnabled: true,
-        externalLinkRel: 'noopener noreferrer',
-        externalLinkTarget: 2,
-      };
       page.getAnnotations({ intent: 'display' }).then(annotations => {
-        const annotationLayer = new pdfjsLib.AnnotationLayer({
-          div: annotDiv,
-          page: page,
-          viewport: displayVp.clone({ dontFlip: true }),
-          linkService: linkService,
-          annotationStorage: null,
-          renderForms: false,
-          enableScripting: false,
-          hasJSActions: false,
+        annotations.forEach(ann => {
+          if (ann.subtype !== 'Link') return;
+          // Determine the URL
+          let url = null;
+          if (ann.url) {
+            url = ann.url;
+          } else if (ann.unsafeUrl) {
+            url = ann.unsafeUrl;
+          } else {
+            return; // skip internal/dest links
+          }
+          // Transform PDF rect [x1,y1,x2,y2] into screen coords
+          const [x1, y1, x2, y2] = pdfjsLib.Util.normalizeRect(ann.rect);
+          const [sx1, sy1] = displayVp.convertToViewportPoint(x1, y1);
+          const [sx2, sy2] = displayVp.convertToViewportPoint(x2, y2);
+          const left   = Math.min(sx1, sx2);
+          const top    = Math.min(sy1, sy2);
+          const width  = Math.abs(sx2 - sx1);
+          const height = Math.abs(sy2 - sy1);
+          const a = document.createElement('a');
+          a.href   = url;
+          a.target = '_blank';
+          a.rel    = 'noopener noreferrer';
+          a.style.cssText = [
+            'position:absolute',
+            `left:${left}px`,
+            `top:${top}px`,
+            `width:${width}px`,
+            `height:${height}px`,
+            'cursor:pointer',
+            'display:block',
+          ].join(';');
+          annotDiv.appendChild(a);
         });
-        annotationLayer.render({ annotations, intent: 'display' });
       });
     }).catch(e => { _pdfRendering = false; console.warn('PDF render error:', e); });
   }).catch(e => { _pdfRendering = false; console.warn('PDF page error:', e); });
