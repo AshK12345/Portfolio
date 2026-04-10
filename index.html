@@ -869,6 +869,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1402,31 +1403,37 @@ function _pdfRender() {
         Math.round(_pdfZoom * 100) + '%';
 
       // Render clickable annotation layer (links) on top of the canvas
-      const annotLayer = document.getElementById('pdf-annotation-layer');
-      annotLayer.innerHTML = '';
+      const annotDiv = document.getElementById('pdf-annotation-layer');
+      annotDiv.innerHTML = '';
       const displayVp = page.getViewport({ scale: _pdfZoom });
-      annotLayer.style.width  = displayVp.width  + 'px';
-      annotLayer.style.height = displayVp.height + 'px';
-      page.getAnnotations().then(annotations => {
-        pdfjsLib.AnnotationLayer.render({
-          viewport: displayVp.clone({ dontFlip: true }),
-          div: annotLayer,
-          annotations: annotations,
+      annotDiv.style.width  = displayVp.width  + 'px';
+      annotDiv.style.height = displayVp.height + 'px';
+      const linkService = {
+        getDestinationHash: () => '',
+        getAnchorUrl: (url) => url,
+        navigateTo: () => {},
+        addLinkAttributes(link, url) {
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        },
+        getExternalLinkTarget: () => 2, // BLANK
+        externalLinkEnabled: true,
+        externalLinkRel: 'noopener noreferrer',
+        externalLinkTarget: 2,
+      };
+      page.getAnnotations({ intent: 'display' }).then(annotations => {
+        const annotationLayer = new pdfjsLib.AnnotationLayer({
+          div: annotDiv,
           page: page,
-          renderInteractiveForms: false,
-          linkService: {
-            getDestinationHash: () => '',
-            getAnchorUrl: () => '',
-            navigateTo: () => {},
-            addLinkAttributes(link, url) {
-              link.href = url;
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
-            },
-            getExternalLinkTarget: () => pdfjsLib.LinkTarget.BLANK,
-            externalLinkEnabled: true,
-          },
+          viewport: displayVp.clone({ dontFlip: true }),
+          linkService: linkService,
+          annotationStorage: null,
+          renderForms: false,
+          enableScripting: false,
+          hasJSActions: false,
         });
+        annotationLayer.render({ annotations, intent: 'display' });
       });
     }).catch(e => { _pdfRendering = false; console.warn('PDF render error:', e); });
   }).catch(e => { _pdfRendering = false; console.warn('PDF page error:', e); });
