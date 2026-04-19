@@ -788,7 +788,7 @@
       <span class="pm-item-arrow">→</span>
     </div>
     <div class="pm-preview" id="preview-spark" data-zone="spark"
-         data-pdf="Portfolio_PDF_V5_shareable.pdf" data-pages="1,3,5,7,9,11">
+         data-slides="Slide1.png,Slide3.png,Slide5.png,Slide7.png,Slide9.png,Slide11.png">
       <div class="pm-preview-strip" id="strip-spark"></div>
       <div class="pm-preview-tiles" id="tiles-spark"></div>
     </div>
@@ -2627,35 +2627,33 @@ function loop() {
 var fromMenu = false;
 
 // ── LANDING PREVIEW SYSTEM ────────────────────────────────────────────
-// On hover, each menu item reveals a pixel-built strip of PDF page thumbnails
-// rendered live by PDF.js, then carousels them slowly.
+// On hover, each menu item reveals a pixel-built strip of page previews,
+// then carousels them. PDFs rendered at low-res via PDF.js for speed.
+// Spark section loads slide images directly (no PDF.js needed).
 (function initPreviews() {
-  const COLS      = 22;   // tile columns (left→right reveal)
-  const ROWS      = 6;    // tile rows
-  const COL_DELAY = 22;   // ms between column reveals (~480ms total)
-  const PREVIEW_H = 150;  // px
-
-  // Per-zone state
+  const COLS      = 22;
+  const ROWS      = 6;
+  const COL_DELAY = 22;   // ms per column (~480ms total reveal)
+  const PDF_SCALE = 0.4;  // 40% scale — fast, readable at thumbnail size
   const S = {};
 
-  // Build tile grids and wire hover for each preview panel
+  // Build tile grids
   document.querySelectorAll('.pm-preview').forEach(panel => {
     const zone  = panel.dataset.zone;
     const tiles = document.getElementById('tiles-' + zone);
-
     tiles.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
     tiles.style.gridTemplateRows    = `repeat(${ROWS},1fr)`;
     for (let c = 0; c < COLS; c++) {
       for (let r = 0; r < ROWS; r++) {
         const t = document.createElement('div');
-        t.className = 'pm-tile'; t.dataset.col = c;
-        t.style.opacity = '1';
+        t.className = 'pm-tile'; t.dataset.col = c; t.style.opacity = '1';
         tiles.appendChild(t);
       }
     }
     S[zone] = { loaded:false, rendered:false, timer:null, leaveTimer:null };
   });
 
+  // Wire hover for each item wrap
   document.querySelectorAll('.pm-item-wrap').forEach(wrap => {
     const panel = wrap.querySelector('.pm-preview');
     if (!panel) return;
@@ -2664,7 +2662,7 @@ var fromMenu = false;
     wrap.addEventListener('mouseenter', () => {
       clearTimeout(S[zone].leaveTimer);
       panel.classList.add('open');
-      if (!S[zone].loaded)        loadPages(zone, panel);
+      if (!S[zone].loaded)        loadContent(zone, panel);
       else if (S[zone].rendered)  document.getElementById('strip-'+zone).classList.add('carousel');
       else                        runReveal(zone);
     });
@@ -2673,7 +2671,6 @@ var fromMenu = false;
       S[zone].leaveTimer = setTimeout(() => {
         panel.classList.remove('open');
         document.getElementById('strip-'+zone).classList.remove('carousel');
-        // Reset tiles for next hover
         clearInterval(S[zone].timer);
         S[zone].rendered = false;
         document.getElementById('tiles-'+zone).querySelectorAll('.pm-tile').forEach(t => {
@@ -2683,49 +2680,73 @@ var fromMenu = false;
     });
   });
 
-  async function loadPages(zone, panel) {
+  function loadContent(zone, panel) {
+    S[zone].loaded = true;
+    if (panel.dataset.slides) loadImages(zone, panel);
+    else                      loadPdfPages(zone, panel);
+  }
+
+  // Image loader — for Spark (slide PNG files, no PDF.js needed)
+  function loadImages(zone, panel) {
+    const strip = document.getElementById('strip-' + zone);
+    const srcs  = panel.dataset.slides.split(',');
+    let loaded  = 0;
+    srcs.forEach(src => {
+      const cell = document.createElement('div');
+      cell.className = 'pm-preview-cell';
+      const img = document.createElement('img');
+      img.style.cssText = 'height:100%;width:auto;display:block;';
+      img.onload  = () => { if (++loaded === srcs.length) finishStrip(zone, strip); };
+      img.onerror = () => { cell.style.background='#0a1a14'; if (++loaded === srcs.length) finishStrip(zone, strip); };
+      img.src = src;
+      cell.appendChild(img);
+      strip.appendChild(cell);
+    });
+  }
+
+  // PDF loader — renders all pages in parallel at PDF_SCALE
+  async function loadPdfPages(zone, panel) {
     const strip    = document.getElementById('strip-' + zone);
     const pageNums = panel.dataset.pages.split(',').map(Number);
-    S[zone].loaded = true;
 
-    // Create shimmer placeholder cells immediately
+    // Shimmer placeholders
     const cells = pageNums.map(pg => {
       const cell = document.createElement('div');
-      cell.className = 'pm-preview-cell loading';
-      const num = document.createElement('div');
+      cell.className = 'pm-preview-cell loading'; cell.style.width = '110px';
+      const num  = document.createElement('div');
       num.className = 'pm-page-num'; num.textContent = 'p.' + pg;
-      cell.appendChild(num);
-      strip.appendChild(cell);
+      cell.appendChild(num); strip.appendChild(cell);
       return { cell, pg };
     });
 
     try {
       const pdf = await pdfjsLib.getDocument(panel.dataset.pdf).promise;
-      for (const { cell, pg } of cells) {
-        if (pg > pdf.numPages) { cell.style.display='none'; continue; }
+      await Promise.all(cells.map(async ({ cell, pg }) => {
+        if (pg > pdf.numPages) { cell.style.display='none'; return; }
         const page     = await pdf.getPage(pg);
-        const scale    = PREVIEW_H / page.getViewport({scale:1}).height;
-        const viewport = page.getViewport({scale});
+        const viewport = page.getViewport({ scale: PDF_SCALE });
         const canvas   = document.createElement('canvas');
         canvas.width   = viewport.width; canvas.height = viewport.height;
         cell.style.width = viewport.width + 'px';
         cell.insertBefore(canvas, cell.querySelector('.pm-page-num'));
-        await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         cell.classList.remove('loading');
-      }
+      }));
     } catch(e) {
-      // PDF not available — show tinted fallback cells so animation still runs
-      cells.forEach(({cell}, i) => {
+      cells.forEach(({ cell }, i) => {
         cell.classList.remove('loading');
-        cell.style.cssText += ';width:110px;background:' + ['#1a0a04','#0a1a14','#04101a'][i%3];
+        cell.style.background = ['#1a0a04','#0a1a14','#04101a'][i%3];
       });
     }
+    finishStrip(zone, strip);
+  }
 
-    // Duplicate strip for seamless carousel loop
+  function finishStrip(zone, strip) {
     [...strip.children].forEach(c => strip.appendChild(c.cloneNode(true)));
     runReveal(zone);
   }
 
+  // Pixel reveal: columns fade transparent left→right
   function runReveal(zone) {
     const tiles = document.getElementById('tiles-' + zone);
     const strip = document.getElementById('strip-' + zone);
@@ -2739,10 +2760,8 @@ var fromMenu = false;
         return;
       }
       tiles.querySelectorAll(`.pm-tile[data-col="${col}"]`).forEach(t => {
-        setTimeout(() => {
-          t.style.transition = 'opacity 0.16s ease';
-          t.style.opacity    = '0';
-        }, Math.random() * 55);
+        setTimeout(() => { t.style.transition='opacity 0.16s ease'; t.style.opacity='0'; },
+          Math.random() * 55);
       });
       col++;
     }, COL_DELAY);
