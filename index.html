@@ -88,75 +88,16 @@
   .pm-item[data-zone="bloom"]:hover { border-color:#0088ff; box-shadow:0 6px 0 #000, 0 8px 24px rgba(0,136,255,0.15); }
 
   /* hover opacity effect — items dim when sibling is hovered */
-  #portfolio-menu:has(.pm-item-wrap:hover) .pm-item-wrap:not(:hover) .pm-item {
+  #portfolio-menu:has(.pm-item:hover) .pm-item:not(:hover) {
     opacity: 0.45;
   }
-  #portfolio-menu:has(.pm-item-wrap:hover) .pm-interactive-teaser {
+  #portfolio-menu:has(.pm-item:hover) .pm-interactive-teaser {
     opacity: 0.3;
   }
   #portfolio-menu:has(.pm-interactive-teaser:hover) .pm-item {
     opacity: 0.45;
   }
   .pm-item { transition:background .18s, border-color .18s, box-shadow .18s, transform .1s, opacity .18s; }
-
-  /* ── ITEM WRAP — contains button + collapsible preview ── */
-  .pm-item-wrap {
-    width:100%; max-width:560px;
-  }
-
-  /* ── PREVIEW PANEL ── */
-  .pm-preview {
-    width:100%; height:0; overflow:hidden;
-    background:#0d0d0d;
-    border-left:3px solid transparent;
-    border-right:1px solid #1a1a1a;
-    border-bottom:1px solid #1a1a1a;
-    position:relative;
-    transition:height 0.18s ease;
-  }
-  .pm-preview.open { height:150px; }
-
-  /* Accent border colours match each zone */
-  #preview-forge { border-left-color:#ff6622; }
-  #preview-spark { border-left-color:#00ccaa; }
-  #preview-bloom { border-left-color:#0088ff; }
-
-  /* Scrolling image strip */
-  .pm-preview-strip {
-    display:flex; height:100%; width:max-content;
-    position:absolute; top:0; left:0;
-  }
-  .pm-preview-strip.carousel { animation:pm-carousel 16s linear infinite; }
-  @keyframes pm-carousel {
-    0%   { transform:translateX(0); }
-    100% { transform:translateX(-50%); }
-  }
-
-  /* Individual page cells */
-  .pm-preview-cell {
-    height:100%; flex-shrink:0;
-    border-right:2px solid #0a0a0a;
-    display:flex; align-items:center; justify-content:center;
-    background:#111; position:relative; overflow:hidden;
-  }
-  .pm-preview-cell canvas { height:100%; display:block; }
-  .pm-preview-cell .pm-page-num {
-    position:absolute; bottom:4px; right:5px;
-    font-size:8px; color:#ffffff22; font-family:monospace; letter-spacing:1px;
-  }
-  .pm-preview-cell.loading::after {
-    content:''; position:absolute; inset:0;
-    background:linear-gradient(90deg,#111 25%,#1a1a1a 50%,#111 75%);
-    background-size:200% 100%; animation:pm-shimmer 1.4s infinite;
-  }
-  @keyframes pm-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-  /* Pixel reveal tile grid */
-  .pm-preview-tiles {
-    position:absolute; inset:0;
-    display:grid; pointer-events:none; z-index:10;
-  }
-  .pm-tile { background:#0d0d0d; }
 
   /* Interactive teaser */
   .pm-interactive-teaser {
@@ -756,61 +697,40 @@
   </div>
   <h2>Select a discipline</h2>
 
-  <div class="pm-item-wrap">
-    <div class="pm-item" data-zone="forge"
-      onclick="openPdfDirect('Portfolio_2026_Forge.pdf', this)"
-      onmousedown="this.classList.add('pressed')"
-      onmouseup="this.classList.remove('pressed')"
-      onmouseleave="this.classList.remove('pressed')">
-      <div class="pm-item-left">
-        <span class="pm-item-title">Industrial Design</span>
-        <span class="pm-item-sub">Physical products, prototyping, CMF</span>
-      </div>
-      <span class="pm-item-arrow">→</span>
+  <div class="pm-item" data-zone="forge"
+    onclick="openPdfDirect('Portfolio_2026_Forge.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Industrial Design</span>
+      <span class="pm-item-sub">Physical products, prototyping, CMF</span>
     </div>
-    <div class="pm-preview" id="preview-forge" data-zone="forge"
-         data-pdf="Portfolio_2026_Forge.pdf" data-pages="1,2,3,4,5,6">
-      <div class="pm-preview-strip" id="strip-forge"></div>
-      <div class="pm-preview-tiles" id="tiles-forge"></div>
-    </div>
+    <span class="pm-item-arrow">→</span>
   </div>
 
-  <div class="pm-item-wrap">
-    <div class="pm-item" data-zone="spark"
-      onclick="openSlideshowDirect(this)"
-      onmousedown="this.classList.add('pressed')"
-      onmouseup="this.classList.remove('pressed')"
-      onmouseleave="this.classList.remove('pressed')">
-      <div class="pm-item-left">
-        <span class="pm-item-title">Interactive Installation Design</span>
-        <span class="pm-item-sub">Exhibitions, sensor systems, spatial narrative</span>
-      </div>
-      <span class="pm-item-arrow">→</span>
+  <div class="pm-item" data-zone="spark"
+    onclick="openSlideshowDirect(this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Interactive Installation Design</span>
+      <span class="pm-item-sub">Exhibitions, sensor systems, spatial narrative</span>
     </div>
-    <div class="pm-preview" id="preview-spark" data-zone="spark"
-         data-slides="Slide1.png,Slide3.png,Slide5.png,Slide7.png,Slide9.png,Slide11.png">
-      <div class="pm-preview-strip" id="strip-spark"></div>
-      <div class="pm-preview-tiles" id="tiles-spark"></div>
-    </div>
+    <span class="pm-item-arrow">→</span>
   </div>
 
-  <div class="pm-item-wrap">
-    <div class="pm-item" data-zone="bloom"
-      onclick="openPdfDirect('Instructional_Design_Portfolio_2026.pdf', this)"
-      onmousedown="this.classList.add('pressed')"
-      onmouseup="this.classList.remove('pressed')"
-      onmouseleave="this.classList.remove('pressed')">
-      <div class="pm-item-left">
-        <span class="pm-item-title">Curriculum Design</span>
-        <span class="pm-item-sub">K–12 STEM, e-learning, facilitation</span>
-      </div>
-      <span class="pm-item-arrow">→</span>
+  <div class="pm-item" data-zone="bloom"
+    onclick="openPdfDirect('Instructional_Design_Portfolio_2026.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Curriculum Design</span>
+      <span class="pm-item-sub">K–12 STEM, e-learning, facilitation</span>
     </div>
-    <div class="pm-preview" id="preview-bloom" data-zone="bloom"
-         data-pdf="Instructional_Design_Portfolio_2026.pdf" data-pages="1,2,3,4,5,6">
-      <div class="pm-preview-strip" id="strip-bloom"></div>
-      <div class="pm-preview-tiles" id="tiles-bloom"></div>
-    </div>
+    <span class="pm-item-arrow">→</span>
   </div>
 
   <button class="pm-interactive-teaser" onclick="goInteractive()">
@@ -2625,148 +2545,6 @@ function loop() {
 // fromMenu: true when a panel was opened directly from the landing menu.
 // Used in closePanel()/closeSlideshow() to return to menu instead of 3D world.
 var fromMenu = false;
-
-// ── LANDING PREVIEW SYSTEM ────────────────────────────────────────────
-// On hover, each menu item reveals a pixel-built strip of page previews,
-// then carousels them. PDFs rendered at low-res via PDF.js for speed.
-// Spark section loads slide images directly (no PDF.js needed).
-(function initPreviews() {
-  const COLS      = 22;
-  const ROWS      = 6;
-  const COL_DELAY = 22;   // ms per column (~480ms total reveal)
-  const PDF_SCALE = 0.4;  // 40% scale — fast, readable at thumbnail size
-  const S = {};
-
-  // Build tile grids
-  document.querySelectorAll('.pm-preview').forEach(panel => {
-    const zone  = panel.dataset.zone;
-    const tiles = document.getElementById('tiles-' + zone);
-    tiles.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
-    tiles.style.gridTemplateRows    = `repeat(${ROWS},1fr)`;
-    for (let c = 0; c < COLS; c++) {
-      for (let r = 0; r < ROWS; r++) {
-        const t = document.createElement('div');
-        t.className = 'pm-tile'; t.dataset.col = c; t.style.opacity = '1';
-        tiles.appendChild(t);
-      }
-    }
-    S[zone] = { loaded:false, rendered:false, timer:null, leaveTimer:null };
-  });
-
-  // Wire hover for each item wrap
-  document.querySelectorAll('.pm-item-wrap').forEach(wrap => {
-    const panel = wrap.querySelector('.pm-preview');
-    if (!panel) return;
-    const zone = panel.dataset.zone;
-
-    wrap.addEventListener('mouseenter', () => {
-      clearTimeout(S[zone].leaveTimer);
-      panel.classList.add('open');
-      if (!S[zone].loaded)        loadContent(zone, panel);
-      else if (S[zone].rendered)  document.getElementById('strip-'+zone).classList.add('carousel');
-      else                        runReveal(zone);
-    });
-
-    wrap.addEventListener('mouseleave', () => {
-      S[zone].leaveTimer = setTimeout(() => {
-        panel.classList.remove('open');
-        document.getElementById('strip-'+zone).classList.remove('carousel');
-        clearInterval(S[zone].timer);
-        S[zone].rendered = false;
-        document.getElementById('tiles-'+zone).querySelectorAll('.pm-tile').forEach(t => {
-          t.style.transition = 'none'; t.style.opacity = '1';
-        });
-      }, 150);
-    });
-  });
-
-  function loadContent(zone, panel) {
-    S[zone].loaded = true;
-    if (panel.dataset.slides) loadImages(zone, panel);
-    else                      loadPdfPages(zone, panel);
-  }
-
-  // Image loader — for Spark (slide PNG files, no PDF.js needed)
-  function loadImages(zone, panel) {
-    const strip = document.getElementById('strip-' + zone);
-    const srcs  = panel.dataset.slides.split(',');
-    let loaded  = 0;
-    srcs.forEach(src => {
-      const cell = document.createElement('div');
-      cell.className = 'pm-preview-cell';
-      const img = document.createElement('img');
-      img.style.cssText = 'height:100%;width:auto;display:block;';
-      img.onload  = () => { if (++loaded === srcs.length) finishStrip(zone, strip); };
-      img.onerror = () => { cell.style.background='#0a1a14'; if (++loaded === srcs.length) finishStrip(zone, strip); };
-      img.src = src;
-      cell.appendChild(img);
-      strip.appendChild(cell);
-    });
-  }
-
-  // PDF loader — renders all pages in parallel at PDF_SCALE
-  async function loadPdfPages(zone, panel) {
-    const strip    = document.getElementById('strip-' + zone);
-    const pageNums = panel.dataset.pages.split(',').map(Number);
-
-    // Shimmer placeholders
-    const cells = pageNums.map(pg => {
-      const cell = document.createElement('div');
-      cell.className = 'pm-preview-cell loading'; cell.style.width = '110px';
-      const num  = document.createElement('div');
-      num.className = 'pm-page-num'; num.textContent = 'p.' + pg;
-      cell.appendChild(num); strip.appendChild(cell);
-      return { cell, pg };
-    });
-
-    try {
-      const pdf = await pdfjsLib.getDocument(panel.dataset.pdf).promise;
-      await Promise.all(cells.map(async ({ cell, pg }) => {
-        if (pg > pdf.numPages) { cell.style.display='none'; return; }
-        const page     = await pdf.getPage(pg);
-        const viewport = page.getViewport({ scale: PDF_SCALE });
-        const canvas   = document.createElement('canvas');
-        canvas.width   = viewport.width; canvas.height = viewport.height;
-        cell.style.width = viewport.width + 'px';
-        cell.insertBefore(canvas, cell.querySelector('.pm-page-num'));
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-        cell.classList.remove('loading');
-      }));
-    } catch(e) {
-      cells.forEach(({ cell }, i) => {
-        cell.classList.remove('loading');
-        cell.style.background = ['#1a0a04','#0a1a14','#04101a'][i%3];
-      });
-    }
-    finishStrip(zone, strip);
-  }
-
-  function finishStrip(zone, strip) {
-    [...strip.children].forEach(c => strip.appendChild(c.cloneNode(true)));
-    runReveal(zone);
-  }
-
-  // Pixel reveal: columns fade transparent left→right
-  function runReveal(zone) {
-    const tiles = document.getElementById('tiles-' + zone);
-    const strip = document.getElementById('strip-' + zone);
-    clearInterval(S[zone].timer);
-    let col = 0;
-    S[zone].timer = setInterval(() => {
-      if (col >= COLS) {
-        clearInterval(S[zone].timer);
-        S[zone].rendered = true;
-        strip.classList.add('carousel');
-        return;
-      }
-      tiles.querySelectorAll(`.pm-tile[data-col="${col}"]`).forEach(t => {
-        setTimeout(() => { t.style.transition='opacity 0.16s ease'; t.style.opacity='0'; },
-          Math.random() * 55);
-      });
-      col++;
-    }, COL_DELAY);
-  }
-})();
 
 function showMenu() {
   const menu = document.getElementById('portfolio-menu');
