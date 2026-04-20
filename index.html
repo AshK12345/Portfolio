@@ -1895,7 +1895,7 @@ const _pdfPageCache = {}; // cache rendered pages as ImageBitmap
 
 function _pdfCachePage(pageNum) {
   if (!_pdfDoc || _pdfPageCache[pageNum]) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const dpr = window.devicePixelRatio || 1;
   _pdfDoc.getPage(pageNum).then(page => {
     const vp = page.getViewport({ scale: _pdfZoom * dpr });
     const offscreen = document.createElement('canvas');
@@ -1966,7 +1966,7 @@ function _pdfRender() {
   _pdfRendering = true;
   document.getElementById('pdf-loading').style.display = 'none';
   _pdfDoc.getPage(_pdfPage).then(page => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = window.devicePixelRatio || 1;
     const vp = page.getViewport({ scale: _pdfZoom * dpr });
     const canvas = document.getElementById('pdf-canvas');
     const ctx = canvas.getContext('2d');
