@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portfolio Planet</title>
+<link rel="prefetch" href="Portfolio_2026_Forge.pdf" as="fetch" crossorigin="anonymous">
+<link rel="prefetch" href="Instructional_Design_Portfolio_2026.pdf" as="fetch" crossorigin="anonymous">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#0e0818; overflow:hidden; font-family:'Courier New',monospace; }
@@ -1006,10 +1008,23 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <script>
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // Pre-parse both PDFs into memory while user is on the landing page
+  // so openPanel() gets an already-resolved promise instead of fetching cold
+  const _pdfCache = {};
+  function _prefetchPdf(filename) {
+    const base = window.location.href.replace(/\/[^\/]*$/, '/');
+    _pdfCache[filename] = pdfjsLib.getDocument({ url: base + filename }).promise;
+  }
+  window.addEventListener('load', () => {
+    if (window.location.protocol !== 'file:') {
+      _prefetchPdf('Portfolio_2026_Forge.pdf');
+      _prefetchPdf('Instructional_Design_Portfolio_2026.pdf');
+    }
+  });
 </script>
 <script>
 const PLANET_R  = 8;
@@ -2097,7 +2112,8 @@ function openPanel(zone) {
     // Build absolute URL relative to this page's location
     const base = window.location.href.replace(/\/[^\/]*$/, '/');
     const pdfUrl = base + zone.pdf;
-    pdfjsLib.getDocument({ url: pdfUrl }).promise.then(doc => {
+    const docPromise = (_pdfCache && _pdfCache[zone.pdf]) ? _pdfCache[zone.pdf] : pdfjsLib.getDocument({ url: pdfUrl }).promise;
+    docPromise.then(doc => {
       _pdfDoc = doc;
       _pdfRender();
       _generateThumbnails(doc);
