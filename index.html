@@ -725,48 +725,62 @@
   #mobile-pdf-overlay.open    { display: flex; }
   #mobile-pdf-overlay.visible { opacity: 1; }
 
-  #mobile-pdf-header {
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px;
-    background: #0e0612;
-    border-bottom: 1px solid var(--mpdf-accent, #ffaa4444);
-    position: relative;
-  }
-  #mobile-pdf-header::after {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: var(--mpdf-accent, #ffcc44);
-    box-shadow: 0 0 14px var(--mpdf-accent, #ffcc44);
-  }
-  #mobile-pdf-title {
-    font-family: 'Courier New', monospace;
-    font-size: 11px; font-weight: 900; letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--mpdf-accent, #ffcc44);
-    flex: 1;
-  }
-  #mobile-pdf-page-counter {
-    font-family: 'Courier New', monospace;
-    font-size: 11px; letter-spacing: 1px;
-    color: var(--mpdf-accent, #ffcc44);
-    opacity: 0.55;
-    margin: 0 14px;
-  }
+  /* Floating close button — top right, always visible when overlay open */
   #mobile-pdf-close {
-    background: transparent;
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 400;
+    background: rgba(10,4,20,0.92);
     border: 1.5px solid var(--mpdf-accent, #ffaa4466);
     color: var(--mpdf-accent, #ffcc44);
     font-family: 'Courier New', monospace;
     font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    padding: 6px 12px; cursor: pointer;
+    padding: 8px 14px; cursor: pointer;
     text-transform: uppercase;
+    box-shadow: 0 0 16px rgba(0,0,0,0.6);
+    display: none;
   }
+  #mobile-pdf-overlay.open #mobile-pdf-close { display: block; }
+
+  /* Floating title — top left */
+  #mobile-pdf-title {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 400;
+    font-family: 'Courier New', monospace;
+    font-size: 10px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--mpdf-accent, #ffcc44);
+    background: rgba(10,4,20,0.88);
+    padding: 8px 12px;
+    max-width: calc(100vw - 120px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: none;
+  }
+  #mobile-pdf-overlay.open #mobile-pdf-title { display: block; }
+
+  /* Floating page counter — bottom center */
+  #mobile-pdf-page-counter {
+    position: fixed;
+    bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 400;
+    font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 1px;
+    color: var(--mpdf-accent, #ffcc44);
+    background: rgba(10,4,20,0.75);
+    padding: 5px 14px;
+    display: none;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #mobile-pdf-overlay.open #mobile-pdf-page-counter { display: block; }
 
   #mobile-pdf-scroll {
-    flex: 1;
+    position: fixed;
+    inset: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 16px 0 32px;
+    padding: 72px 0 60px; /* top pad clears the floating title; bottom clears page counter */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -991,11 +1005,9 @@
 
 <!-- ── MOBILE PDF SCROLL VIEWER ── -->
 <div id="mobile-pdf-overlay">
-  <div id="mobile-pdf-header">
-    <span id="mobile-pdf-title"></span>
-    <span id="mobile-pdf-page-counter"></span>
-    <button id="mobile-pdf-close" onclick="closeMobilePdf()">✕ CLOSE</button>
-  </div>
+  <span id="mobile-pdf-title"></span>
+  <span id="mobile-pdf-page-counter"></span>
+  <button id="mobile-pdf-close" onclick="closeMobilePdf()">✕ CLOSE</button>
   <div id="mobile-pdf-scroll"></div>
 </div>
 
@@ -3013,31 +3025,32 @@ function startGame() {
     const total = doc.numPages;
     document.getElementById('mobile-pdf-page-counter').textContent = total + ' pages';
 
-    // Use viewport width minus padding to determine render scale
-    const availableWidth = window.innerWidth - 24; // matches CSS calc(100vw - 24px)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // availableWidth is the CSS display width of each page wrap
+    const availableWidth = window.innerWidth - 24;
 
-    // Render pages sequentially to avoid overwhelming the worker
     let pageNum = 1;
     function renderNext() {
       if (pageNum > total) return;
       const n = pageNum++;
       doc.getPage(n).then(page => {
-        // Get the natural PDF page dimensions at scale=1
         const naturalVp = page.getViewport({ scale: 1 });
-        // Calculate the scale needed to fit availableWidth
-        const scale = availableWidth / naturalVp.width;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const vp = page.getViewport({ scale: scale * dpr });
+        // scale so the page renders at exactly availableWidth CSS pixels,
+        // then multiply by dpr for crisp physical pixels on retina screens
+        const scale = (availableWidth / naturalVp.width) * dpr;
+        const vp = page.getViewport({ scale });
 
         const wrap = document.createElement('div');
         wrap.className = 'mobile-pdf-page-wrap';
 
         const canvas = document.createElement('canvas');
+        // canvas pixel dimensions = physical pixels (retina-sharp)
         canvas.width  = vp.width;
         canvas.height = vp.height;
-        // CSS dimensions: actual display size (no DPR scaling)
-        canvas.style.width  = (vp.width  / dpr) + 'px';
-        canvas.style.height = (vp.height / dpr) + 'px';
+        // DO NOT set canvas.style.width/height — let CSS width:100%; height:auto handle it.
+        // The wrap is calc(100vw - 24px) = availableWidth CSS px, so the canvas
+        // will be displayed at exactly vp.width/dpr × vp.height/dpr CSS pixels,
+        // which matches what we rendered at — no up-scaling, no blur.
 
         const label = document.createElement('div');
         label.className = 'mobile-pdf-page-label';
@@ -3047,9 +3060,7 @@ function startGame() {
         wrap.appendChild(label);
         scroll.appendChild(wrap);
 
-        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(() => {
-          renderNext();
-        });
+        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(renderNext);
       });
     }
     renderNext();
@@ -3064,13 +3075,121 @@ function startGame() {
       document.getElementById('mobile-pdf-scroll').innerHTML = '';
       _mPdfDoc = null;
     }, 320);
-    // Show menu again
+    _showMenuAgain();
+  };
+
+  function _showMenuAgain() {
     const menu = document.getElementById('portfolio-menu');
     menu.style.display = 'flex';
     requestAnimationFrame(() => requestAnimationFrame(() => { menu.style.opacity = '1'; }));
+  }
+
+  // ── PINCH-TO-ZOOM on the PDF scroll container ─────────────────────
+  (function addPdfPinchZoom() {
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    let currentScale = 1;
+    let originX = 0, originY = 0;
+    let lastDist = null;
+
+    function dist(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function midpoint(touches) {
+      return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2,
+      };
+    }
+
+    scroll.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        lastDist = dist(e.touches);
+        const mid = midpoint(e.touches);
+        // midpoint relative to the scroll container
+        const rect = scroll.getBoundingClientRect();
+        originX = mid.x - rect.left;
+        originY = mid.y - rect.top + scroll.scrollTop;
+      }
+    }, { passive: true });
+
+    scroll.addEventListener('touchmove', e => {
+      if (e.touches.length !== 2 || lastDist === null) return;
+      e.preventDefault(); // prevent page scroll during pinch
+      const newDist = dist(e.touches);
+      const ratio = newDist / lastDist;
+      lastDist = newDist;
+
+      currentScale = Math.min(4, Math.max(0.8, currentScale * ratio));
+      scroll.style.transformOrigin = `${originX}px ${originY}px`;
+      scroll.style.transform = `scale(${currentScale})`;
+    }, { passive: false });
+
+    scroll.addEventListener('touchend', e => {
+      if (e.touches.length < 2) lastDist = null;
+      // Snap back to 1 if under-zoomed
+      if (currentScale < 1) {
+        currentScale = 1;
+        scroll.style.transform = 'scale(1)';
+      }
+    }, { passive: true });
+  })();
+
+  // ── INTERCEPT openSlideshowDirect ON MOBILE ───────────────────────
+  // Replace the slideshow with a headerless full-screen image scroll,
+  // matching the PDF scroll experience.
+  const _origOpenSlideshowDirect = window.openSlideshowDirect;
+  window.openSlideshowDirect = function() {
+    const menu = document.getElementById('portfolio-menu');
+    document.getElementById('c').style.display = 'none';
+    menu.style.opacity = '0';
+    setTimeout(() => { menu.style.display = 'none'; }, 400);
+    openMobileSlideshow();
   };
 
-  // ── SWIPE TO NAVIGATE SLIDESHOW ──────────────────────────────────
+  window.openMobileSlideshow = function() {
+    const ov = document.getElementById('mobile-pdf-overlay');
+    // Re-use the same mobile overlay with Spark's teal accent
+    ov.style.setProperty('--mpdf-accent', '#00eebb');
+    document.getElementById('mobile-pdf-title').textContent = 'Spark — Interactive Installations';
+    document.getElementById('mobile-pdf-page-counter').textContent = '';
+
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    scroll.innerHTML = '<div style="color:#00eebb;font-family:Courier New,monospace;font-size:12px;letter-spacing:3px;padding:40px 0;text-align:center;">// LOADING...</div>';
+
+    ov.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open', 'visible')));
+
+    // Pull slide images from the existing .sslide-bg elements
+    const slides = document.querySelectorAll('.sslide-bg');
+    scroll.innerHTML = '';
+    document.getElementById('mobile-pdf-page-counter').textContent = slides.length + ' slides';
+
+    slides.forEach((img, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'mobile-pdf-page-wrap';
+
+      const image = document.createElement('img');
+      image.src = img.src;
+      image.alt = img.alt || ('Slide ' + (i + 1));
+      image.style.cssText = 'display:block;width:100%;height:auto;';
+
+      const label = document.createElement('div');
+      label.className = 'mobile-pdf-page-label';
+      label.textContent = (i + 1) + ' / ' + slides.length;
+
+      wrap.appendChild(image);
+      wrap.appendChild(label);
+      scroll.appendChild(wrap);
+    });
+  };
+
+  // closeMobilePdf already handles the overlay teardown + menu restore,
+  // so the slideshow close button reuses it automatically.
+
+  // ── SWIPE LEFT/RIGHT still works in the desktop slide overlay ────
+  // (kept in case someone opens it on a wider phone in landscape)
   (function addSlideSwipe() {
     const stage = document.getElementById('slide-stage-wrap');
     if (!stage) return;
