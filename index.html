@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Ashwan Kadam — Portfolio</title>
 <link rel="prefetch" href="Portfolio_2026_Forge.pdf" as="fetch" crossorigin="anonymous">
 <link rel="prefetch" href="Instructional_Design_Portfolio_2026.pdf" as="fetch" crossorigin="anonymous">
@@ -789,14 +789,14 @@
   }
 
   .mobile-pdf-page-wrap {
-    width: calc(100vw - 24px);
     position: relative;
     box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    /* width is set by the canvas inside — don't force it */
+    flex-shrink: 0;
   }
   .mobile-pdf-page-wrap canvas {
     display: block;
-    width: 100% !important;
-    height: auto !important;
+    /* dimensions set explicitly in JS — do NOT override with CSS */
   }
   .mobile-pdf-page-label {
     position: absolute; bottom: 6px; right: 8px;
@@ -3026,8 +3026,7 @@ function startGame() {
     document.getElementById('mobile-pdf-page-counter').textContent = total + ' pages';
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    // availableWidth is the CSS display width of each page wrap
-    const availableWidth = window.innerWidth - 24;
+    const availableWidth = window.innerWidth - 24; // CSS display width for each page
 
     let pageNum = 1;
     function renderNext() {
@@ -3035,22 +3034,23 @@ function startGame() {
       const n = pageNum++;
       doc.getPage(n).then(page => {
         const naturalVp = page.getViewport({ scale: 1 });
-        // scale so the page renders at exactly availableWidth CSS pixels,
-        // then multiply by dpr for crisp physical pixels on retina screens
-        const scale = (availableWidth / naturalVp.width) * dpr;
+        // CSS display dimensions: fit width to availableWidth, height proportional
+        const cssWidth  = availableWidth;
+        const cssHeight = Math.round(availableWidth * naturalVp.height / naturalVp.width);
+        // Physical pixel dimensions for sharp rendering on retina
+        const scale = (cssWidth / naturalVp.width) * dpr;
         const vp = page.getViewport({ scale });
 
         const wrap = document.createElement('div');
         wrap.className = 'mobile-pdf-page-wrap';
 
         const canvas = document.createElement('canvas');
-        // canvas pixel dimensions = physical pixels (retina-sharp)
-        canvas.width  = vp.width;
+        canvas.width  = vp.width;   // physical pixels
         canvas.height = vp.height;
-        // DO NOT set canvas.style.width/height — let CSS width:100%; height:auto handle it.
-        // The wrap is calc(100vw - 24px) = availableWidth CSS px, so the canvas
-        // will be displayed at exactly vp.width/dpr × vp.height/dpr CSS pixels,
-        // which matches what we rendered at — no up-scaling, no blur.
+        // Explicit CSS size — matches the natural page proportions
+        canvas.style.width  = cssWidth  + 'px';
+        canvas.style.height = cssHeight + 'px';
+        canvas.style.display = 'block';
 
         const label = document.createElement('div');
         label.className = 'mobile-pdf-page-label';
@@ -3083,58 +3083,6 @@ function startGame() {
     menu.style.display = 'flex';
     requestAnimationFrame(() => requestAnimationFrame(() => { menu.style.opacity = '1'; }));
   }
-
-  // ── PINCH-TO-ZOOM on the PDF scroll container ─────────────────────
-  (function addPdfPinchZoom() {
-    const scroll = document.getElementById('mobile-pdf-scroll');
-    let currentScale = 1;
-    let originX = 0, originY = 0;
-    let lastDist = null;
-
-    function dist(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-    function midpoint(touches) {
-      return {
-        x: (touches[0].clientX + touches[1].clientX) / 2,
-        y: (touches[0].clientY + touches[1].clientY) / 2,
-      };
-    }
-
-    scroll.addEventListener('touchstart', e => {
-      if (e.touches.length === 2) {
-        lastDist = dist(e.touches);
-        const mid = midpoint(e.touches);
-        // midpoint relative to the scroll container
-        const rect = scroll.getBoundingClientRect();
-        originX = mid.x - rect.left;
-        originY = mid.y - rect.top + scroll.scrollTop;
-      }
-    }, { passive: true });
-
-    scroll.addEventListener('touchmove', e => {
-      if (e.touches.length !== 2 || lastDist === null) return;
-      e.preventDefault(); // prevent page scroll during pinch
-      const newDist = dist(e.touches);
-      const ratio = newDist / lastDist;
-      lastDist = newDist;
-
-      currentScale = Math.min(4, Math.max(0.8, currentScale * ratio));
-      scroll.style.transformOrigin = `${originX}px ${originY}px`;
-      scroll.style.transform = `scale(${currentScale})`;
-    }, { passive: false });
-
-    scroll.addEventListener('touchend', e => {
-      if (e.touches.length < 2) lastDist = null;
-      // Snap back to 1 if under-zoomed
-      if (currentScale < 1) {
-        currentScale = 1;
-        scroll.style.transform = 'scale(1)';
-      }
-    }, { passive: true });
-  })();
 
   // ── INTERCEPT openSlideshowDirect ON MOBILE ───────────────────────
   // Replace the slideshow with a headerless full-screen image scroll,
