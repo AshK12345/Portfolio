@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Planet</title>
+<link rel="prefetch" href="Portfolio_2026_Forge.pdf" as="fetch" crossorigin="anonymous">
+<link rel="prefetch" href="Instructional_Design_Portfolio_2026.pdf" as="fetch" crossorigin="anonymous">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0e0818; overflow:hidden; font-family:'Courier New',monospace; }
+  canvas { display:block; }
+
+  /* ── PORTFOLIO MENU SCREEN ── */
+  #portfolio-menu {
+    position:fixed; inset:0;
+    background:#0a0a0a;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:200; gap:14px; padding:40px 24px;
+    opacity:1; transition:opacity .4s;
+  }
+  #portfolio-menu.visible { opacity:1; }
+  #portfolio-menu h2 {
+    font-size:11px; letter-spacing:4px; color:#bbb; text-transform:uppercase;
+    margin-bottom:8px; font-family:'Courier New',monospace;
+    text-shadow:0 0 12px rgba(255,200,100,0.2);
+  }
+
+  .pm-header {
+    text-align:center; margin-bottom:16px;
+  }
+  .pm-name {
+    font-size:clamp(28px,5vw,48px); font-weight:900; color:#ffcc44;
+    text-shadow:0 0 30px #ffaa2244;
+    letter-spacing:4px; text-transform:uppercase;
+    font-family:'Courier New',monospace;
+    margin-bottom:6px;
+  }
+  .pm-tagline {
+    color:#c8aa88; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    font-family:'Courier New',monospace;
+  }
+
+  .pm-item {
+    width:100%; max-width:560px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 28px;
+    background:#111;
+    border:1px solid #1a1a1a;
+    cursor:pointer;
+    transition:background .18s, border-color .18s, box-shadow .18s, transform .1s;
+    font-family:'Courier New',monospace;
+    user-select:none;
+    /* press-in effect uses box-shadow as fake depth */
+    box-shadow: 0 6px 0 #000, 0 8px 16px rgba(0,0,0,0.5);
+    position:relative; top:0;
+  }
+  .pm-item:hover {
+    background:#161616;
+  }
+  .pm-item:active, .pm-item.pressed {
+    box-shadow: 0 1px 0 #000, 0 2px 6px rgba(0,0,0,0.4);
+    transform: translateY(5px);
+  }
+  .pm-item-left { display:flex; flex-direction:column; gap:5px; }
+  .pm-item-title {
+    font-size:clamp(16px,2.5vw,22px); font-weight:900;
+    letter-spacing:2px; text-transform:uppercase;
+  }
+  .pm-item-sub {
+    font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    opacity:0.85; color:#ddd;
+  }
+  .pm-item-arrow {
+    font-size:18px; opacity:0.55; transition:opacity .18s, transform .18s;
+    margin-left:16px; margin-top:4px; flex-shrink:0;
+  }
+  .pm-item:hover .pm-item-arrow { opacity:0.9; transform:translateX(4px); }
+
+  /* Per-item accent colors */
+  .pm-item[data-zone="forge"] { border-left:3px solid #ff6622; }
+  .pm-item[data-zone="forge"] .pm-item-title { color:#ff8844; }
+  .pm-item[data-zone="forge"]:hover { border-color:#ff6622; box-shadow:0 6px 0 #000, 0 8px 24px rgba(255,102,34,0.15); }
+
+  .pm-item[data-zone="spark"] { border-left:3px solid #00ccaa; }
+  .pm-item[data-zone="spark"] .pm-item-title { color:#00eebb; }
+  .pm-item[data-zone="spark"]:hover { border-color:#00ccaa; box-shadow:0 6px 0 #000, 0 8px 24px rgba(0,204,170,0.15); }
+
+  .pm-item[data-zone="bloom"] { border-left:3px solid #0088ff; }
+  .pm-item[data-zone="bloom"] .pm-item-title { color:#22aaff; }
+  .pm-item[data-zone="bloom"]:hover { border-color:#0088ff; box-shadow:0 6px 0 #000, 0 8px 24px rgba(0,136,255,0.15); }
+
+  /* Tags */
+  .pm-item-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+  .pm-tag {
+    font-size:8px; letter-spacing:1.2px; text-transform:uppercase;
+    padding:3px 8px; border:1px solid #555; color:#aaa;
+    font-family:'Courier New',monospace;
+    transition:color .25s, border-color .25s, text-shadow .25s, background .25s;
+  }
+  .pm-item[data-zone="forge"] .pm-tag--lit {
+    color:#ff8844; border-color:#ff6622aa;
+    text-shadow:0 0 8px #ff662299;
+    background:rgba(255,102,34,0.08);
+  }
+  .pm-item[data-zone="spark"] .pm-tag--lit {
+    color:#00eebb; border-color:#00ccaaaa;
+    text-shadow:0 0 8px #00ccaa99;
+    background:rgba(0,204,170,0.08);
+  }
+  .pm-item[data-zone="bloom"] .pm-tag--lit {
+    color:#22aaff; border-color:#0088ffaa;
+    text-shadow:0 0 8px #0088ff99;
+    background:rgba(0,136,255,0.08);
+  }
+
+  /* hover opacity effect — items dim when sibling is hovered */
+  #portfolio-menu:has(.pm-item:hover) .pm-item:not(:hover) {
+    opacity: 0.45;
+  }
+  #portfolio-menu:has(.pm-item:hover) .pm-interactive-teaser {
+    opacity: 0.3;
+  }
+  #portfolio-menu:has(.pm-interactive-teaser:hover) .pm-item {
+    opacity: 0.45;
+  }
+  .pm-item { transition:background .18s, border-color .18s, box-shadow .18s, transform .1s, opacity .18s; }
+
+  /* Interactive teaser */
+  .pm-interactive-teaser {
+    width:100%; max-width:560px;
+    display:flex; align-items:center; gap:16px;
+    padding:14px 20px;
+    margin-top:10px;
+    border:1px solid #554422;
+    cursor:pointer;
+    font-family:'Courier New',monospace;
+    transition:border-color .2s, background .2s, box-shadow .2s, opacity .18s;
+    background:rgba(255,170,68,0.04);
+    outline:none;
+    text-align:left;
+    box-shadow:0 0 18px rgba(255,150,40,0.08), inset 0 0 20px rgba(255,150,40,0.03);
+  }
+  .pm-interactive-teaser:hover {
+    border-color:#ffaa44cc;
+    background:rgba(255,170,68,0.1);
+    box-shadow:0 0 28px rgba(255,150,40,0.25), inset 0 0 20px rgba(255,150,40,0.06);
+  }
+  .pm-interactive-teaser:focus-visible {
+    border-color:#ffaa44;
+    box-shadow:0 0 0 2px #ffaa4466;
+  }
+  .pm-teaser-icon { font-size:20px; flex-shrink:0; }
+  .pm-teaser-text { display:flex; flex-direction:column; gap:4px; flex:1; }
+  .pm-teaser-headline {
+    font-size:12px; font-weight:700; letter-spacing:1.5px;
+    color:#c49a52; text-transform:uppercase;  /* ~5.1:1 on #0a0a0a */
+  }
+  .pm-teaser-note {
+    font-size:10px; letter-spacing:1px; color:#aaa; text-transform:uppercase; /* ~7:1 on #0a0a0a */
+  }
+  .pm-teaser-arrow {
+    font-size:14px; color:#c49a52;
+    transition:transform .2s;
+  }
+  .pm-interactive-teaser:hover .pm-teaser-arrow,
+  .pm-interactive-teaser:focus-visible .pm-teaser-arrow { transform:translateX(4px); }
+  /* Back to Menu Button */
+  #back-to-menu {
+    position:fixed; top:20px; left:20px;
+    background:rgba(10,4,20,0.92); 
+    border:2px solid #ffaa4466;
+    padding:10px 18px; 
+    color:#ffcc55;
+    font-size:11px; 
+    font-weight:700; 
+    letter-spacing:2px; 
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:all .2s;
+    z-index:50;
+    display:none;
+    font-family:'Courier New',monospace;
+    box-shadow:0 0 20px rgba(255,170,68,0.2);
+  }
+  #back-to-menu:hover {
+    background:rgba(255,170,68,0.15);
+    border-color:#ffcc55;
+    box-shadow:0 0 30px rgba(255,170,68,0.4);
+    transform:translateY(-1px);
+  }
+  #back-to-menu::before {
+    content:'← ';
+  }
+
+  #controls {
+    position:fixed; bottom:20px; right:20px;
+    background:rgba(10,4,20,0.85); border:1px solid #ffaa4433;
+    padding:11px 15px; color:#c4a07a; font-size:11px; line-height:2.2;
+    pointer-events:none; z-index:10; letter-spacing:1px;
+  }
+  #controls span { color:#ffcc55; font-weight:700; }
+
+  #banner {
+    position:fixed; top:24px; left:50%; transform:translateX(-50%);
+    background:rgba(10,4,20,0.92); border:1px solid #ffaa4455;
+    padding:8px 28px; color:#ffcc55;
+    font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+    box-shadow:0 0 20px #ff880022;
+    opacity:0; transition:opacity .3s; pointer-events:none; z-index:10; white-space:nowrap;
+  }
+  #banner.show { opacity:1; }
+
+  /* first #panel block removed — see slide-in panel below */
+
+  #enter-hint {
+    position:fixed; bottom:76px; left:50%; transform:translateX(-50%);
+    background:rgba(10,4,20,0.88); border:1px solid #ffaa4455;
+    padding:7px 22px; color:#ffcc55;
+    font-size:11px; font-weight:700; pointer-events:none; z-index:10;
+    opacity:0; transition:opacity .3s; white-space:nowrap; letter-spacing:2px; text-transform:uppercase;
+  }
+  #enter-hint.show { opacity:1; }
+
+  /* ── VIGNETTE ── */
+  #vignette {
+    position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(8,2,16,0.75) 100%);
+    opacity:0; transition:opacity .12s;
+  }
+
+  /* ── DRIVE INSTRUCTIONS OVERLAY ── */
+  #drive-instructions {
+    position:fixed; inset:0; z-index:100;
+    background:rgba(0,0,0,0.72);
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(2px);
+    opacity:0; transition:opacity .5s;
+    pointer-events:none;
+  }
+  #drive-instructions.show {
+    opacity:1;
+    pointer-events:all;
+  }
+  #drive-instructions-box {
+    background:rgba(10,4,20,0.96);
+    border:2px solid #ffaa4466;
+    box-shadow:0 0 60px rgba(255,170,68,0.25), inset 0 0 40px rgba(255,120,30,0.04);
+    padding:44px 56px;
+    max-width:480px;
+    width:90%;
+    text-align:center;
+    font-family:'Courier New',monospace;
+    position:relative;
+  }
+  #drive-instructions-box::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, #ffcc44, transparent);
+    box-shadow:0 0 20px #ffcc44;
+  }
+  .di-title {
+    font-size:13px; letter-spacing:5px; color:#ffdd88; text-transform:uppercase;
+    margin-bottom:28px; font-weight:900;
+    text-shadow: 0 0 16px rgba(255,200,80,0.6);
+  }
+  .di-grid {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:16px 28px; margin-bottom:36px;
+    text-align:left;
+  }
+  .di-row {
+    display:flex; align-items:center; gap:12px;
+  }
+  .di-key {
+    background:#2a1a06; border:2px solid #ffcc44;
+    color:#fff; font-size:12px; font-weight:900;
+    padding:6px 12px; letter-spacing:1px;
+    white-space:nowrap; flex-shrink:0;
+    box-shadow:0 4px 0 #000, 0 0 12px rgba(255,200,60,0.3);
+    text-shadow:0 0 8px rgba(255,220,100,0.5);
+  }
+  .di-label {
+    color:#fff; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    text-shadow:0 1px 4px rgba(0,0,0,0.8);
+  }
+  .di-hint {
+    font-size:11px; letter-spacing:4px; text-transform:uppercase;
+    color:#ffdd88; font-weight:700;
+    text-shadow:0 0 16px rgba(255,210,80,0.7);
+    animation: di-blink 1.2s ease-in-out infinite;
+  }
+  @keyframes di-blink {
+    0%,100% { opacity:0.55; }
+    50% { opacity:1.0; }
+  }
+
+  /* ── MINIMAP ── */
+  #minimap {
+    position:fixed; bottom:20px; left:20px;
+    width:110px; height:110px; border-radius:50%;
+    border:1px solid #ffaa4433;
+    background:rgba(10,4,20,0.88);
+    box-shadow:0 0 16px #ff880018, inset 0 0 10px rgba(255,136,40,0.03);
+    pointer-events:none; z-index:10;
+  }
+  #minimap-canvas { width:110px; height:110px; border-radius:50%; display:block; }
+
+  /* ── PDF OVERLAY ── */
+  #pdf-overlay {
+    position:fixed; inset:0; z-index:200;
+    background:#0e0612;
+    display:none; flex-direction:column;
+    opacity:0; transition:opacity .3s;
+  }
+  #pdf-overlay.open  { display:flex; }
+  #pdf-overlay.visible { opacity:1; }
+
+  #pdf-topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; flex-shrink:0;
+    border-bottom:1px solid var(--pdf-accent,#ffaa4444);
+    background:#0e0612;
+  }
+  #pdf-topbar::after {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--pdf-accent,#ffcc44);
+    box-shadow:0 0 18px var(--pdf-accent,#ffcc44);
+  }
+  #pdf-zone-name {
+    font-size:13px; font-weight:900; letter-spacing:3px;
+    text-transform:uppercase; color:var(--pdf-accent,#ffcc44);
+  }
+  #pdf-controls {
+    display:flex; align-items:center; gap:12px;
+  }
+  .pdf-btn {
+    background:rgba(255,170,68,0.08); 
+    border:1.5px solid var(--pdf-accent,#ffaa4466);
+    color:var(--pdf-accent,#ffcc44); 
+    font-family:'Courier New',monospace;
+    font-size:11px; 
+    font-weight:700; 
+    letter-spacing:1px;
+    padding:6px 14px; 
+    cursor:pointer;
+    transition:all .15s; 
+    text-transform:uppercase;
+    text-decoration:none; 
+    display:inline-block;
+    box-shadow:0 0 8px rgba(255,170,68,0.1);
+  }
+  .pdf-btn:hover { 
+    background:rgba(255,170,68,0.18);
+    border-color:var(--pdf-accent,#ffcc44);
+    box-shadow:0 0 16px rgba(255,170,68,0.3);
+    transform:translateY(-1px);
+  }
+  .pdf-btn:disabled { opacity:0.25; cursor:default; }
+  #pdf-page-info {
+    font-size:11px; color:#7a5533; letter-spacing:1px; min-width:80px; text-align:center;
+  }
+  #pdf-zoom-info {
+    font-size:10px; color:#5a3a22; letter-spacing:1px; min-width:44px; text-align:center;
+  }
+  #pdf-canvas-wrap {
+    flex:1; 
+    overflow:hidden; 
+    display:flex; 
+    flex-direction:row;
+    background:radial-gradient(ellipse at 50% 30%, #140820 0%, #0e0612 100%);
+    position:relative;
+  }
+  #pdf-main-area {
+    flex:1;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:24px 16px;
+    position:relative;
+    transition:transform 0.3s ease;
+  }
+  #pdf-canvas-container {
+    position:relative;
+    display:inline-block;
+    box-shadow:0 0 40px rgba(0,0,0,0.8), 0 0 1px var(--pdf-accent,#ffaa4433);
+  }
+  #pdf-canvas {
+    display:block;
+  }
+  #pdf-annotation-layer {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:auto;
+  }
+  #pdf-annotation-layer a {
+    position:absolute;
+    cursor:pointer;
+  }
+  #pdf-loading {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:13px; color:#ffcc44; letter-spacing:3px; pointer-events:none;
+  }
+
+  /* PDF Thumbnail Sidebar */
+  #pdf-sidebar {
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:180px; 
+    background:rgba(6,2,10,0.95);
+    border-right:1px solid var(--pdf-accent,#ffaa4422);
+    overflow-y:auto;
+    padding:12px 8px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition:transform 0.3s ease, opacity 0.3s ease;
+    transform:translateX(-100%);
+    opacity:0;
+    z-index:15;
+  }
+  #pdf-sidebar.open {
+    transform:translateX(0);
+    opacity:1;
+  }
+  
+  /* Sidebar Toggle Button */
+  .sidebar-toggle {
+    position:absolute;
+    left:0;
+    top:50%;
+    transform:translateY(-50%);
+    background:rgba(10,4,20,0.9);
+    border:2px solid var(--pdf-accent,#ffaa4466);
+    color:var(--pdf-accent,#ffcc44);
+    width:32px;
+    height:48px;
+    cursor:pointer;
+    z-index:20;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:16px;
+    transition:left 0.3s ease, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    border-radius:0 4px 4px 0;
+    font-family:'Courier New',monospace;
+    font-weight:700;
+    box-shadow:0 0 20px var(--pdf-accent,#ffaa4444);
+    animation:toggle-pulse 2s ease-in-out infinite;
+  }
+  @keyframes toggle-pulse {
+    0%, 100% { box-shadow:0 0 20px var(--pdf-accent,#ffaa4444); }
+    50% { box-shadow:0 0 30px var(--pdf-accent,#ffaa4466); }
+  }
+  .sidebar-toggle:hover {
+    background:rgba(255,170,68,0.15);
+    border-color:var(--pdf-accent,#ffcc44);
+    box-shadow:0 0 30px var(--pdf-accent,#ffaa4466);
+    animation:none;
+  }
+  .sidebar-toggle.open {
+    left:180px;
+  }
+  
+  .pdf-thumb {
+    cursor:pointer;
+    border:2px solid #333;
+    transition:all .15s;
+    position:relative;
+    background:#0a0a0a;
+  }
+  .pdf-thumb:hover {
+    border-color:var(--pdf-accent,#ffaa4444);
+    box-shadow:0 0 12px var(--pdf-accent,#ffaa4422);
+  }
+  .pdf-thumb.active {
+    border-color:var(--pdf-accent,#ffcc44);
+    box-shadow:0 0 16px var(--pdf-accent,#ffaa4466);
+  }
+  .pdf-thumb canvas {
+    width:100%;
+    display:block;
+  }
+  .pdf-thumb-label {
+    position:absolute;
+    bottom:4px;
+    right:4px;
+    background:rgba(0,0,0,0.8);
+    color:var(--pdf-accent,#ffcc44);
+    font-size:9px;
+    font-weight:700;
+    padding:2px 6px;
+    letter-spacing:0.5px;
+    font-family:'Courier New',monospace;
+  }
+
+  /* Navigation Tutorial Overlay */
+  #nav-tutorial {
+    position:fixed;
+    top:70px; 
+    right:20px;
+    background:rgba(10,4,20,0.95);
+    border:2px solid var(--pdf-accent,#ffaa4466);
+    padding:16px 24px;
+    color:var(--pdf-accent,#ffcc44);
+    font-size:12px; font-weight:700;
+    letter-spacing:2px; text-transform:uppercase;
+    z-index:250;
+    opacity:0; pointer-events:none;
+    transition:opacity .4s;
+    box-shadow:0 0 30px rgba(255,170,68,0.3);
+    text-align:center; max-width:90%;
+  }
+  #nav-tutorial.show {
+    opacity:1;
+    animation:gentle-pulse-right 2s ease-in-out infinite;
+  }
+  #nav-tutorial::before {
+    content:'';
+    position:absolute; top:-12px; right:30%; transform:translateX(50%);
+    width:0; height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-bottom:12px solid var(--pdf-accent,#ffaa4466);
+  }
+  @keyframes gentle-pulse-right {
+    0%, 100% { transform:translateY(0); }
+    50% { transform:translateY(-4px); }
+  }
+  @keyframes gentle-pulse {
+    0%, 100% { transform:translateX(-50%) translateY(0); }
+    50% { transform:translateX(-50%) translateY(-4px); }
+  }
+
+  /* Slideshow Tutorial - matches nav-tutorial but with cyan */
+  #slide-tutorial {
+    position:fixed;
+    top:70px; 
+    right:20px;
+    background:rgba(0,12,10,0.95);
+    border:2px solid #00ccaa66;
+    padding:16px 24px;
+    color:#00eebb;
+    font-size:12px; font-weight:700;
+    letter-spacing:2px; text-transform:uppercase;
+    z-index:250;
+    opacity:0; pointer-events:none;
+    transition:opacity .4s;
+    box-shadow:0 0 30px rgba(0,204,170,0.3);
+    text-align:center; max-width:90%;
+    font-family:'Courier New',monospace;
+  }
+  #slide-tutorial.show {
+    opacity:1;
+    animation:gentle-pulse-right 2s ease-in-out infinite;
+  }
+  #slide-tutorial::before {
+    content:'';
+    position:absolute; top:-12px; right:30%; transform:translateX(50%);
+    width:0; height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-bottom:12px solid #00ccaa66;
+  }
+
+  /* ── SLIDESHOW OVERLAY (Spark) ── */
+  #slide-overlay {
+    position:fixed; inset:0; z-index:200;
+    background:#000;
+    display:none; flex-direction:column;
+    opacity:0; transition:opacity .3s;
+  }
+  #slide-overlay.open    { display:flex; }
+  #slide-overlay.visible { opacity:1; }
+
+  #slide-topbar {
+    height:44px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; flex-shrink:0;
+    border-bottom:1px solid #00ccaa44;
+    background:#060d0c;
+    position:relative;
+  }
+  #slide-topbar::after {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:#00eebb; box-shadow:0 0 18px #00eebb;
+  }
+  #slide-zone-name {
+    font-size:13px; font-weight:900; letter-spacing:3px;
+    text-transform:uppercase; color:#00eebb;
+  }
+  #slide-top-controls { display:flex; align-items:center; gap:12px; }
+
+  .slide-btn {
+    background:transparent; border:1px solid #00ccaa44;
+    color:#00eebb; font-family:'Courier New',monospace;
+    font-size:11px; font-weight:700; letter-spacing:1px;
+    padding:6px 14px; cursor:pointer; transition:all .15s; text-transform:uppercase;
+  }
+  .slide-btn:hover { background:#00ccaa22; box-shadow:0 0 10px #00ccaa44; }
+  .slide-btn:disabled { opacity:0.25; cursor:default; }
+
+  #slide-stage-wrap {
+    flex:1; 
+    overflow:hidden;
+    display:flex; 
+    flex-direction:row;
+    background:#000;
+    min-height:0;
+    position:relative;
+  }
+  
+  /* Slideshow Thumbnail Sidebar */
+  #slide-sidebar {
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:180px; 
+    background:rgba(0,12,10,0.95);
+    border-right:1px solid #00ccaa22;
+    overflow-y:auto;
+    padding:12px 8px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition:transform 0.3s ease, opacity 0.3s ease;
+    transform:translateX(-100%);
+    opacity:0;
+    z-index:15;
+  }
+  #slide-sidebar.open {
+    transform:translateX(0);
+    opacity:1;
+  }
+  .slide-thumb {
+    cursor:pointer;
+    border:2px solid #333;
+    transition:all .15s;
+    position:relative;
+    background:#0a0a0a;
+  }
+  .slide-thumb:hover {
+    border-color:#00ccaa44;
+    box-shadow:0 0 12px #00ccaa22;
+  }
+  .slide-thumb.active {
+    border-color:#00eebb;
+    box-shadow:0 0 16px #00ccaa66;
+  }
+  .slide-thumb img {
+    width:100%;
+    display:block;
+  }
+  .slide-thumb-label {
+    position:absolute;
+    bottom:4px;
+    right:4px;
+    background:rgba(0,0,0,0.8);
+    color:#00eebb;
+    font-size:9px;
+    font-weight:700;
+    padding:2px 6px;
+    letter-spacing:0.5px;
+    font-family:'Courier New',monospace;
+  }
+  
+  #slide-main-area {
+    flex:1;
+    overflow:auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:0;
+    transition:transform 0.3s ease;
+  }
+
+  #slide-stage {
+    position:relative;
+    width:  min(100vw, calc((100vh - 44px) * 16 / 9));
+    height: min(calc(100vh - 44px), calc(100vw * 9 / 16));
+    flex-shrink:0;
+  }
+
+  .sslide {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    opacity:0; transition:opacity .25s;
+    pointer-events:none;
+  }
+  .sslide.active { opacity:1; pointer-events:all; }
+
+  .sslide-bg {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover; display:block;
+    user-select:none; -webkit-user-drag:none;
+  }
+
+  .svideo-slot { position:absolute; z-index:10; }
+  .svideo-inner { width:100%; height:100%; background:#08080f; overflow:hidden; }
+
+  #slide-zoom-info {
+    font-size:10px; color:#1a5a4a; letter-spacing:1px; min-width:44px; text-align:center;
+    font-family:'Courier New',monospace;
+  }
+  #slide-page-info {
+    font-size:11px; color:#1a6655; letter-spacing:1px; min-width:52px; text-align:center;
+    font-family:'Courier New',monospace;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ── PORTFOLIO MENU ── -->
+<div id="portfolio-menu">
+  <div class="pm-header">
+    <h1 class="pm-name">Ashwan Kadam</h1>
+    <p class="pm-tagline">Designer &nbsp;·&nbsp; Educator &nbsp;·&nbsp; Builder</p>
+  </div>
+  <h2>Select a discipline</h2>
+
+  <div class="pm-item" data-zone="forge"
+    onclick="openPdfDirect('Portfolio_2026_Forge.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Industrial Design</span>
+      <span class="pm-item-sub">Physical products, prototyping, CMF</span>
+      <div class="pm-item-tags">
+        <span class="pm-tag">Fusion 360 / SolidWorks</span>
+        <span class="pm-tag">KeyShot</span>
+        <span class="pm-tag">CMF Strategy</span>
+        <span class="pm-tag">DFM</span>
+        <span class="pm-tag">Fabrication</span>
+        <span class="pm-tag">Ergonomics</span>
+      </div>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+
+  <div class="pm-item" data-zone="spark"
+    onclick="openSlideshowDirect(this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Interactive Installation Design</span>
+      <span class="pm-item-sub">Exhibitions, sensor systems, spatial narrative</span>
+      <div class="pm-item-tags">
+        <span class="pm-tag">Physical Computing</span>
+        <span class="pm-tag">Arduino / RPi</span>
+        <span class="pm-tag">TouchDesigner</span>
+        <span class="pm-tag">Immersive Environments</span>
+        <span class="pm-tag">Prop Fabrication</span>
+        <span class="pm-tag">Speculative Design</span>
+      </div>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+
+  <div class="pm-item" data-zone="bloom"
+    onclick="openPdfDirect('Instructional_Design_Portfolio_2026.pdf', this)"
+    onmousedown="this.classList.add('pressed')"
+    onmouseup="this.classList.remove('pressed')"
+    onmouseleave="this.classList.remove('pressed')">
+    <div class="pm-item-left">
+      <span class="pm-item-title">Curriculum Design</span>
+      <span class="pm-item-sub">K–12 STEM, e-learning, facilitation</span>
+      <div class="pm-item-tags">
+        <span class="pm-tag">K–12 STEM</span>
+        <span class="pm-tag">Project-Based Learning</span>
+        <span class="pm-tag">Curriculum Dev.</span>
+        <span class="pm-tag">Facilitation</span>
+        <span class="pm-tag">Differentiated Learning</span>
+        <span class="pm-tag">AI Literacy</span>
+      </div>
+    </div>
+    <span class="pm-item-arrow">→</span>
+  </div>
+
+  <button class="pm-interactive-teaser" onclick="goInteractive()">
+    <span class="pm-teaser-icon">🌍</span>
+    <div class="pm-teaser-text">
+      <span class="pm-teaser-headline">Feeling experimental? Come take a ride.</span>
+      <span class="pm-teaser-note">Best experienced on desktop — not recommended on mobile</span>
+    </div>
+    <span class="pm-teaser-arrow">→</span>
+  </button>
+</div>
+
+<!-- #intro is hidden immediately on game start; kept as anchor for JS -->
+<div id="intro" style="display:none;"></div>
+
+<canvas id="c"></canvas>
+<button id="back-to-menu" onclick="returnToMenu()">Return to Menu</button>
+<div id="vignette"></div>
+
+<div id="controls" style="display:none;">
+  <span>↑ ↓</span> THROTTLE / BRAKE &nbsp; <span>← →</span> STEER<br>
+  <span>ENTER</span> VIEW WORK
+</div>
+<div id="banner"></div>
+<div id="enter-hint" style="display:none;">Press Enter to view work</div>
+
+<!-- DEBUG: lat/lon/UV display — remove when done calibrating -->
+
+
+<!-- Drive Instructions Overlay -->
+<div id="drive-instructions">
+  <div id="drive-instructions-box">
+    <div class="di-title">How to drive</div>
+    <div class="di-grid">
+      <div class="di-row"><span class="di-key">↑</span><span class="di-label">Accelerate</span></div>
+      <div class="di-row"><span class="di-key">↓</span><span class="di-label">Brake / Reverse</span></div>
+      <div class="di-row"><span class="di-key">←</span><span class="di-label">Steer left</span></div>
+      <div class="di-row"><span class="di-key">→</span><span class="di-label">Steer right</span></div>
+      <div class="di-row"><span class="di-key">ENTER</span><span class="di-label">Open city</span></div>
+      <div class="di-row"><span class="di-key">ESC</span><span class="di-label">Close / back</span></div>
+    </div>
+    <div class="di-hint">— Press any key to begin —</div>
+  </div>
+</div>
+
+<!-- Minimap -->
+<div id="minimap" style="display:none;"><canvas id="minimap-canvas" width="110" height="110"></canvas></div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- PDF Overlay -->
+<div id="pdf-overlay">
+  <div id="pdf-topbar">
+    <span id="pdf-zone-name"></span>
+    <div id="pdf-controls">
+      <button class="pdf-btn" id="pdf-zoom-out" onclick="pdfZoom(-0.25)">− ZOOM</button>
+      <span id="pdf-zoom-info">100%</span>
+      <button class="pdf-btn" id="pdf-zoom-in" onclick="pdfZoom(0.25)">+ ZOOM</button>
+      <span id="pdf-page-info">— / —</span>
+      <button class="pdf-btn" id="pdf-prev" onclick="pdfPage(-1)">◀ PREV</button>
+      <button class="pdf-btn" id="pdf-next" onclick="pdfPage(1)">NEXT ▶</button>
+      <a id="pdf-download" class="pdf-btn" download>↓ SAVE</a>
+      <button class="pdf-btn" onclick="closePanel()">✕ CLOSE</button>
+    </div>
+  </div>
+  <div id="nav-tutorial">Use ◄ PREV / NEXT ▶ buttons above to navigate pages</div>
+  <div id="pdf-canvas-wrap">
+    <div id="pdf-sidebar"></div>
+    <button class="sidebar-toggle" id="pdf-sidebar-toggle" onclick="togglePdfSidebar()">▶</button>
+    <div id="pdf-main-area">
+      <div id="pdf-loading">// LOADING DATA...</div>
+      <div id="pdf-canvas-container">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="pdf-annotation-layer"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLIDESHOW OVERLAY (Spark — Interactive Exhibitions) ── -->
+<div id="slide-overlay">
+  <div id="slide-topbar">
+    <span id="slide-zone-name">Spark — Interactive Exhibitions</span>
+    <div id="slide-top-controls">
+      <button class="slide-btn" id="slide-zoom-out" onclick="slideZoom(-0.25)">− ZOOM</button>
+      <span id="slide-zoom-info">100%</span>
+      <button class="slide-btn" id="slide-zoom-in" onclick="slideZoom(0.25)">+ ZOOM</button>
+      <span id="slide-page-info">1 / 25</span>
+      <button class="slide-btn" id="slide-prev" onclick="sGo(-1)">◀ PREV</button>
+      <button class="slide-btn" id="slide-next" onclick="sGo(1)">NEXT ▶</button>
+      <button class="slide-btn" onclick="closeSlideshow()">✕ CLOSE</button>
+    </div>
+  </div>
+
+  <div id="slide-tutorial">Use ◄ PREV / NEXT ▶ buttons above to navigate pages</div>
+
+  <div id="slide-stage-wrap">
+    <div id="slide-sidebar"></div>
+    <button class="sidebar-toggle" id="slide-sidebar-toggle" onclick="toggleSlideSidebar()" style="border-color:#00ccaa66;">▶</button>
+    <div id="slide-main-area">
+    <div id="slide-stage">
+
+      <div class="sslide active" data-index="0">
+        <img class="sslide-bg" src="Slide1.png" alt="Slide 1" draggable="false">
+      </div>
+      <div class="sslide" data-index="1">
+        <img class="sslide-bg" src="Slide2.png" alt="Slide 2" draggable="false">
+      </div>
+      <div class="sslide" data-index="2">
+        <img class="sslide-bg" src="Slide3.png" alt="Slide 3" draggable="false">
+      </div>
+      <div class="sslide" data-index="3">
+        <img class="sslide-bg" src="Slide4.png" alt="Slide 4" draggable="false">
+      </div>
+      <div class="sslide" data-index="4">
+        <img class="sslide-bg" src="Slide5.png" alt="Slide 5" draggable="false">
+      </div>
+      <div class="sslide" data-index="5">
+        <img class="sslide-bg" src="Slide6.png" alt="Slide 6" draggable="false">
+      </div>
+      <div class="sslide" data-index="6">
+        <img class="sslide-bg" src="Slide7.png" alt="Slide 7" draggable="false">
+      </div>
+      <div class="sslide" data-index="7">
+        <img class="sslide-bg" src="Slide8.png" alt="Slide 8" draggable="false">
+      </div>
+      <div class="sslide" data-index="8">
+        <img class="sslide-bg" src="Slide9.png" alt="Slide 9" draggable="false">
+      </div>
+      <div class="sslide" data-index="9">
+        <img class="sslide-bg" src="Slide10.png" alt="Slide 10" draggable="false">
+      </div>
+      <div class="sslide" data-index="10">
+        <img class="sslide-bg" src="Slide11.png" alt="Slide 11" draggable="false">
+      </div>
+      <div class="sslide" data-index="11">
+        <img class="sslide-bg" src="Slide12.png" alt="Slide 12" draggable="false">
+      </div>
+      <div class="sslide" data-index="12">
+        <img class="sslide-bg" src="Slide13.png" alt="Slide 13" draggable="false">
+      </div>
+      <div class="sslide" data-index="13">
+        <img class="sslide-bg" src="Slide14.png" alt="Slide 14" draggable="false">
+      </div>
+      <div class="sslide" data-index="14">
+        <img class="sslide-bg" src="Slide15.png" alt="Slide 15" draggable="false">
+      </div>
+      <div class="sslide" data-index="15">
+        <img class="sslide-bg" src="Slide16.png" alt="Slide 16" draggable="false">
+        <div class="svideo-slot" style="left:47.0%;top:50.66%;width:24.5%;height:45.33%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/6_WTqqkWxoY" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="16">
+        <img class="sslide-bg" src="Slide17.png" alt="Slide 17" draggable="false">
+      </div>
+      <div class="sslide" data-index="17">
+        <img class="sslide-bg" src="Slide18.png" alt="Slide 18" draggable="false">
+        <div class="svideo-slot" style="left:47.0%;top:3.56%;width:50.0%;height:92.44%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/jVnxjLN5TIE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="18">
+        <img class="sslide-bg" src="Slide19.png" alt="Slide 19" draggable="false">
+        <div class="svideo-slot" style="left:41.32%;top:48.14%;width:19.15%;height:48.56%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/RFvR6DKo2-A" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="19">
+        <img class="sslide-bg" src="Slide20.png" alt="Slide 20" draggable="false">
+        <div class="svideo-slot" style="left:47.0%;top:3.56%;width:50%;height:45.33%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/Aqk38HqYOT0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+        <div class="svideo-slot" style="left:47.0%;top:50.67%;width:50.0%;height:45.33%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/s0gYaJYR-dE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="20">
+        <img class="sslide-bg" src="Slide21.png" alt="Slide 21" draggable="false">
+      </div>
+      <div class="sslide" data-index="21">
+        <img class="sslide-bg" src="Slide22.png" alt="Slide 22" draggable="false">
+        <div class="svideo-slot" style="left:2.5%;top:8.89%;width:95.0%;height:88.18%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/r339BqkpTBs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="22">
+        <img class="sslide-bg" src="Slide23.png" alt="Slide 23" draggable="false">
+      </div>
+      <div class="sslide" data-index="23">
+        <img class="sslide-bg" src="Slide24.png" alt="Slide 24" draggable="false">
+        <div class="svideo-slot" style="left:2.5%;top:8.89%;width:53.72%;height:88.18%;">
+          <div class="svideo-inner">
+            <iframe src="https://www.youtube.com/embed/R016O2QP6ng" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;display:block;"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="sslide" data-index="24">
+        <img class="sslide-bg" src="Slide25.png" alt="Slide 25" draggable="false">
+      </div>
+
+    </div><!-- #slide-stage -->
+    </div><!-- #slide-main-area -->
+  </div><!-- #slide-stage-wrap -->
+
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // Pre-parse both PDFs into memory while user is on the landing page
+  // so openPanel() gets an already-resolved promise instead of fetching cold
+  const _pdfCache = {};
+  function _prefetchPdf(filename) {
+    const base = window.location.href.replace(/\/[^\/]*$/, '/');
+    _pdfCache[filename] = pdfjsLib.getDocument({ url: base + filename }).promise;
+  }
+  window.addEventListener('load', () => {
+    if (window.location.protocol !== 'file:') {
+      _prefetchPdf('Portfolio_2026_Forge.pdf');
+      _prefetchPdf('Instructional_Design_Portfolio_2026.pdf');
+    }
+  });
+</script>
+<script>
+const PLANET_R  = 8;
+const CAR_HOVER = 0.21;
+
+// ── ZONES ──────────────────────────────────────────────────────────
+const ZONES = [
+  {
+    name:"Forge", subtitle:"Industrial Design", icon:"⚙",
+    lat:-15, lon:0,
+    color:0xff6622, accent:"#ff8844",
+    pdf: "Portfolio_2026_Forge.pdf",
+    body:"Product designer focused on manufactured goods, tooling, and human-centred hardware. From concept sketches to production-ready CAD — bridging aesthetics and engineering.",
+    tags:["CAD / SolidWorks","Prototyping","Ergonomics","Material Sel.","DFM","Keyshot"]
+  },
+  {
+    name:"Spark", subtitle:"Interactive Exhibitions", icon:"◈",
+    lat:-15, lon:120,
+    color:0x00ccaa, accent:"#00eebb",
+    pdf: "Portfolio_PDF_V5_shareable.pdf",
+    body:"Designing immersive hands-on experiences for museums, science centres, and public spaces. Sensor-driven interactives, spatial storytelling, exhibit hardware.",
+    tags:["Exhibit Design","Arduino / RPi","Touchscreen UX","Spatial Narrative","Fabrication","TouchDesigner"]
+  },
+  {
+    name:"Bloom", subtitle:"Instructional Design", icon:"◉",
+    lat:-15, lon:240,
+    color:0x0088ff, accent:"#22aaff",
+    pdf: "Instructional_Design_Portfolio_2026.pdf",
+    body:"Building learning experiences that work — K–12 STEM, corporate onboarding, e-learning. Evidence-based, learner-centred, always iterated with real feedback.",
+    tags:["Learning Design","Bloom's Taxonomy","Articulate 360","LMS / SCORM","Assessment","Facilitation"]
+  },
+  // ── TO ADD A 4TH CITY: copy one of the blocks above and append it here ──
+  // Recommended placement: lat:12, lon:90 (equidistant between Forge lon=0 and Spark lon=120)
+  // Then add a matching entry to cityCoords in the road texture section below.
+];
+
+// ── RENDERER ───────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ canvas:document.getElementById('c'), antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = false;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x4a1878);
+scene.fog = new THREE.FogExp2(0x6b2d8a, 0.008);
+
+// ── SKY GRADIENT SPHERE ────────────────────────────────────────────
+// Large sphere with vertex colors: purple top → warm orange horizon
+(function buildSky() {
+  const skyGeo = new THREE.SphereGeometry(180, 32, 20);
+  const skyPos = skyGeo.attributes.position;
+  const skyCol = new Float32Array(skyPos.count * 3);
+  for (let i = 0; i < skyPos.count; i++) {
+    const y = new THREE.Vector3().fromBufferAttribute(skyPos, i).normalize().y;
+    // t=0 at horizon, t=1 at top
+    const t = Math.max(0, y);
+    const tb = Math.max(0, -y); // below horizon
+    // Top: deep purple #3a0d6e → horizon: warm pink-orange #e8704a
+    skyCol[i*3]   = 0.23 + t*(-0.05) + tb*0.05;  // r
+    skyCol[i*3+1] = 0.05 + t*(-0.02) + tb*0.08;  // g
+    skyCol[i*3+2] = 0.43 + t*0.10    + tb*(-0.2); // b
+    // Blend toward orange at horizon
+    const hor = Math.exp(-y*y*8); // bell curve at horizon
+    skyCol[i*3]   += hor * 0.62;
+    skyCol[i*3+1] += hor * 0.28;
+    skyCol[i*3+2] -= hor * 0.18;
+    // Clamp
+    skyCol[i*3]   = Math.min(1, Math.max(0, skyCol[i*3]));
+    skyCol[i*3+1] = Math.min(1, Math.max(0, skyCol[i*3+1]));
+    skyCol[i*3+2] = Math.min(1, Math.max(0, skyCol[i*3+2]));
+  }
+  skyGeo.setAttribute('color', new THREE.BufferAttribute(skyCol, 3));
+  scene.add(new THREE.Mesh(skyGeo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })
+  ));
+})();
+
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 400);
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ── LIGHTING ───────────────────────────────────────────────────────
+// Boost ambient heavily so planet is uniformly lit — reduces nausea from shadow swinging
+scene.add(new THREE.AmbientLight(0xff9966, 3.2));
+
+// Sun — much lower intensity, keep for direction cue but not dominant
+const sun = new THREE.DirectionalLight(0xff7733, 0.8);
+sun.position.set(20, 10, 8);
+scene.add(sun);
+
+// Soft rim light from sky
+const rimLight = new THREE.DirectionalLight(0xdd55ff, 0.6);
+rimLight.position.set(-10, 20, -8);
+scene.add(rimLight);
+
+// Warm ground bounce
+const groundBounce = new THREE.DirectionalLight(0xff9955, 0.4);
+groundBounce.position.set(0, -14, 0);
+scene.add(groundBounce);
+
+// Pole fill lights — compensate for road shadow accumulation at poles
+const northPoleFill = new THREE.PointLight(0xffaa66, 2.8, 32);
+northPoleFill.position.set(0, PLANET_R + 4, 0);
+scene.add(northPoleFill);
+const southPoleFill = new THREE.PointLight(0xffaa66, 2.8, 32);
+southPoleFill.position.set(0, -(PLANET_R + 4), 0);
+scene.add(southPoleFill);
+
+// ── STARS ──────────────────────────────────────────────────────────
+(function buildStars() {
+  const pos = new Float32Array(3000*3);
+  for (let i=0;i<3000;i++) {
+    const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=120+Math.random()*80;
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.sin(ph)*Math.sin(th); pos[i*3+2]=r*Math.cos(ph);
+  }
+  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  // Mix of warm cream and dusty rose stars
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color:0xffd4a0,size:0.32,sizeAttenuation:true})));
+})();
+
+// ── WARM DUSK PLANET ───────────────────────────────────────────────
+// Terracotta and sienna surface with amber highlights
+const planetGeo = new THREE.SphereGeometry(PLANET_R, 80, 80);
+const pPos = planetGeo.attributes.position;
+const pCol = new Float32Array(pPos.count*3);
+for (let i=0;i<pPos.count;i++) {
+  const v = new THREE.Vector3().fromBufferAttribute(pPos,i).normalize();
+  const n1 = Math.sin(v.x*12.3)*Math.cos(v.y*9.7)*Math.sin(v.z*11.1);
+  const n2 = Math.sin(v.x*5.1 + v.z*7.3)*Math.cos(v.y*6.8);
+  const n  = (n1*0.6 + n2*0.4 + 1)*0.5;
+  // Rich terracotta — dark enough to contrast sky, warm enough to feel dusk
+  const base = 0.14 + n*0.10;
+  pCol[i*3]   = Math.min(1, base * 1.6);   // r — warm burnt sienna
+  pCol[i*3+1] = Math.min(1, base * 0.60);  // g — muted
+  pCol[i*3+2] = Math.min(1, base * 0.40);  // b — minimal
+}
+planetGeo.setAttribute('color', new THREE.BufferAttribute(pCol,3));
+const planet = new THREE.Mesh(planetGeo, new THREE.MeshLambertMaterial({ vertexColors:true }));
+scene.add(planet);
+
+// Warm amber atmosphere shell
+scene.add(new THREE.Mesh(
+  new THREE.SphereGeometry(PLANET_R*1.04, 32, 32),
+  new THREE.MeshBasicMaterial({ color:0xff8833, transparent:true, opacity:0.035, side:THREE.BackSide })
+));
+
+// ── ROAD NETWORK ───────────────────────────────────────────────────
+// Equirectangular texture (4096×2048) mapped onto a sphere.
+// Roads follow constant-longitude lines (vertical in UV space = zero distortion).
+// Cities are ~120° apart in longitude, giving natural equal spacing.
+// Pole hubs use a pixel-by-pixel polar→equirectangular warp so they render
+// as true circles on the sphere rather than squished ellipses.
+(function buildRoadNetwork() {
+  const W = 4096, H = 2048;
+  const rc = document.createElement('canvas');
+  rc.width = W; rc.height = H;
+  const ctx = rc.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // ── COORDINATE HELPERS ──
+  // THREE.js SphereGeometry UV: x = (1 - lon/360)*W, y = (90-lat)/180*H
+  function ll2px(lat, lon) {
+    lon = ((lon % 360) + 360) % 360;
+    return [(1 - lon/360)*W, (90-lat)/180*H];
+  }
+
+  // Generate N points along a polar road from the pole to a city,
+  // at a given longitude. Returns array of [x,y] pixel points.
+  // polar_r goes from 0 (pole) to city_polar_r.
+  // Because lon is constant, x is constant — perfectly vertical in equirectangular.
+  function polarRoadPoints(lon, lat_start, lat_end, N) {
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const lat = lat_start + (lat_end - lat_start) * i / N;
+      pts.push(ll2px(lat, lon));
+    }
+    return pts;
+  }
+
+  // ── DRAW A ROAD along a list of pixel points ──
+  function drawRoadPts(pts, w) {
+    if (pts.length < 2) return;
+    const segs = [[]];
+    pts.forEach(p => {
+      const seg = segs[segs.length-1];
+      if (seg.length > 0 && Math.abs(p[0]-seg[seg.length-1][0]) > W/2) segs.push([]);
+      segs[segs.length-1].push(p);
+    });
+    segs.forEach(seg => {
+      if (seg.length < 2) return;
+      const path = () => {
+        ctx.beginPath(); ctx.moveTo(seg[0][0],seg[0][1]);
+        seg.slice(1).forEach(p => ctx.lineTo(p[0],p[1]));
+      };
+      // Dust halo — many fine steps, warm terracotta tones matching planet surface,
+      // fade to fully transparent so planet color shows through naturally
+      [
+        {w:w+320,c:'rgba(140,70,30,0.03)'}, {w:w+240,c:'rgba(130,62,24,0.05)'},
+        {w:w+180,c:'rgba(118,55,20,0.07)'}, {w:w+135,c:'rgba(105,48,16,0.09)'},
+        {w:w+100,c:'rgba(90,40,12,0.11)'},  {w:w+74, c:'rgba(75,32,9,0.14)'},
+        {w:w+54, c:'rgba(60,25,7,0.18)'},   {w:w+38, c:'rgba(46,18,5,0.23)'},
+        {w:w+26, c:'rgba(34,13,3,0.30)'},   {w:w+16, c:'rgba(22,8,2,0.42)'},
+        {w:w+8,  c:'rgba(12,4,1,0.60)'},
+      ].forEach(({w:pw,c})=>{ path(); ctx.strokeStyle=c; ctx.lineWidth=pw; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke(); });
+      // Shadow
+      path(); ctx.strokeStyle='rgba(5,2,1,0.92)'; ctx.lineWidth=w+14; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+      // White border
+      path(); ctx.strokeStyle='rgba(248,242,228,1.0)'; ctx.lineWidth=w+2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+      // Asphalt body
+      path(); ctx.strokeStyle='rgba(30,20,10,1.0)'; ctx.lineWidth=w-6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+      // Surface warmth highlight
+      path(); ctx.strokeStyle='rgba(50,36,18,0.5)'; ctx.lineWidth=w-32; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+      // White dashed centre line
+      path(); ctx.strokeStyle='rgba(255,252,240,1.0)'; ctx.lineWidth=11; ctx.setLineDash([55,36]); ctx.lineCap='round'; ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
+  // City pad — lat-corrected ellipse (cities at lat=12, barely distorted)
+  function cityPad(lat, lon, r, color) {
+    const [cx,cy] = ll2px(lat,lon);
+    const cosL = Math.cos(lat*Math.PI/180);
+    const ry = r * cosL;
+    const ell = (rx,ry2) => { ctx.beginPath(); ctx.ellipse(cx,cy,rx,Math.max(ry2,4),0,0,Math.PI*2); };
+    const grad = ctx.createRadialGradient(cx,cy,ry*0.3,cx,cy,r+180);
+    grad.addColorStop(0,'rgba(45,22,6,0.28)'); grad.addColorStop(0.4,'rgba(55,28,8,0.16)');
+    grad.addColorStop(0.75,'rgba(50,24,6,0.07)'); grad.addColorStop(1,'rgba(30,14,4,0)');
+    ell(r+180,(r+180)*cosL); ctx.fillStyle=grad; ctx.fill();
+    ell(r+20,(r+20)*cosL); ctx.fillStyle='rgba(18,8,2,0.82)'; ctx.fill();   // packed earth
+    ell(r+10,(r+10)*cosL); ctx.fillStyle='rgba(30,12,3,0.68)'; ctx.fill();   // inner shoulder
+    ell(r+3, (r+3)*cosL);  ctx.fillStyle='rgba(220,185,130,0.90)'; ctx.fill(); // warm sand edge
+    ell(r,ry); ctx.fillStyle='rgba(30,20,10,1.0)'; ctx.fill();                // asphalt
+    ell(r*0.66,ry*0.66); ctx.fillStyle='rgba(50,36,18,0.65)'; ctx.fill();
+    ell(r-5,(r-5)*cosL); ctx.strokeStyle=color; ctx.lineWidth=9; ctx.setLineDash([]); ctx.stroke();
+    ell(r*0.66,ry*0.66); ctx.strokeStyle='rgba(255,252,240,0.88)'; ctx.lineWidth=5; ctx.setLineDash([14,10]); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Polar-projected hub: renders hub into a small polar canvas, then warps it
+  // pixel-by-pixel into the equirectangular texture. This is the correct approach
+  // from the "Polar Coordinates" pre-warp technique — no singularity, no distortion.
+  function drawPolarHub(pole_lat, lon_center, r_deg, accentColor) {
+    const isNorth = pole_lat > 0;
+    // Size of the polar cap region in equirectangular pixels
+    // r_deg degrees of latitude = r_deg/180 * H pixels in equi
+    const capH = Math.round((r_deg * 3.5) / 180 * H);  // total cap height with dust
+
+    // For each pixel in the equirectangular cap region, compute its polar coords,
+    // then look up what color it should be (asphalt, accent ring, dust, etc.)
+    const capY_start = isNorth ? 0 : H - capH;
+    const capY_end   = isNorth ? capH : H;
+
+    const imageData = ctx.getImageData(0, 0, W, H);
+    const data = imageData.data;
+
+    for (let py = capY_start; py < capY_end; py++) {
+      for (let px = 0; px < W; px++) {
+        // Convert pixel to lat/lon
+        const lat = 90 - (py / H) * 180;
+        const lon = (1 - px / W) * 360;
+        // Distance from pole in degrees
+        const dist = isNorth ? (90 - lat) : (90 + lat);
+        if (dist > r_deg * 3.5) continue; // outside dust halo
+
+        // Longitude angle relative to hub center (normalized 0..1 round trip)
+        const lonDelta = ((lon - lon_center + 540) % 360) - 180; // -180..180
+
+        const idx = (py * W + px) * 4;
+        let r=0, g=0, b=0, a=0;
+
+        if (dist <= r_deg) {
+          // Inside hub disc — asphalt
+          const inner = dist / r_deg;
+
+          // Road lanes: three entry roads at city longitudes (lon=31,150,269)
+          // Each road is a radial stripe at its longitude, width ~RW degrees
+          const cityLons = [31.55, 150.21, 269.30];
+          const roadHalfWidthDeg = 7.5; // degrees of longitude width for road entry
+          const onRoad = cityLons.some(clon => {
+            // Angular distance from this pixel's lon to road lon
+            let diff = ((lon - clon + 540) % 360) - 180;
+            // Scale by cos(lat) to account for longitude convergence near pole
+            const scaledDiff = Math.abs(diff) * Math.cos(dist * Math.PI / 180);
+            return scaledDiff < roadHalfWidthDeg;
+          });
+
+          if (onRoad && inner > 0.1) {
+            // Road asphalt lane inside hub
+            r=30; g=20; b=10; a=255;
+            // White centre dash every ~20° of radius
+            if (Math.floor(dist * 2.5) % 3 === 0) { r=255; g=252; b=240; a=200; }
+          } else if (inner <= 0.62) {
+            r=50; g=36; b=18; a=255; // inner lighter asphalt
+          } else if (inner <= 0.96) {
+            r=30; g=20; b=10; a=255; // outer asphalt
+          } else {
+            const ac = hexToRgb(accentColor);
+            r=ac.r; g=ac.g; b=ac.b; a=230;
+          }
+          // White border at outer edge
+          if (inner > 0.995) { r=248; g=242; b=228; a=255; }
+          // Inner dashed ring
+          if (!onRoad && inner >= 0.60 && inner <= 0.66) {
+            const dashOn = Math.floor(lonDelta * 2 + 30) % 3 === 0;
+            if (dashOn) { r=255; g=252; b=240; a=220; }
+          }
+        } else if (dist <= r_deg * 1.04) {
+          r=248; g=242; b=228; a=255; // white border
+        } else if (dist <= r_deg * 1.12) {
+          r=5; g=2; b=1; a=220; // shadow
+        } else {
+          // Dust halo — multiply-style darkening
+          const t = (dist - r_deg * 1.12) / (r_deg * 2.38);
+          const dustA = Math.max(0, (1-t) * 180);
+          r=40; g=18; b=5; a=Math.round(dustA);
+        }
+
+        if (a === 0) continue;
+        // Alpha-blend over existing pixel
+        const ea = data[idx+3]/255, na = a/255;
+        const outA = na + ea*(1-na);
+        if (outA > 0) {
+          data[idx]   = Math.round((r*na + data[idx]  *ea*(1-na))/outA);
+          data[idx+1] = Math.round((g*na + data[idx+1]*ea*(1-na))/outA);
+          data[idx+2] = Math.round((b*na + data[idx+2]*ea*(1-na))/outA);
+          data[idx+3] = Math.round(outA*255);
+        }
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function hexToRgb(hex) {
+    // Handle rgba() strings
+    const m = hex.match(/rgba?\((\d+),(\d+),(\d+)/);
+    return m ? {r:+m[1],g:+m[2],b:+m[3]} : {r:255,g:215,b:40};
+  }
+
+  // ── TRAPEZOIDAL ROAD RENDERER ────────────────────────────────────
+  // Width at each latitude = visualW / cos(lat) so the road appears
+  // constant-width on the sphere despite equirectangular distortion.
+  // Dust halo uses many stacked semi-transparent trapezoids for a
+  // smooth gradient falloff. All shapes are drawn 3× (normal, ±W)
+  // to handle seam wrapping near lon=0/360.
+  function drawTrapRoad(lon, lat_start, lat_end, visualW) {
+    const N = 120;
+
+    // Pre-compute per-row centre, cosine, and pole-fade factor
+    const rows = [];
+    for (let i = 0; i <= N; i++) {
+      const lat = lat_start + (lat_end - lat_start) * i / N;
+      const cosL = Math.max(Math.cos(lat * Math.PI / 180), 0.08);
+      const [cx, cy] = ll2px(lat, lon);
+      // Fade dust to zero as road approaches poles (prevents dark-cap accumulation)
+      const poleFade = Math.max(0, 1 - Math.pow(Math.abs(lat) / 48, 1.4));
+      rows.push({ cx, cy, cosL, poleFade });
+    }
+
+    // Fill a trapezoid polygon defined by per-row half-width function.
+    // Always draws at x, x-W, x+W so seam-crossing roads render fully.
+    function drawTrap(halfWFn, fillStyle) {
+      const left  = rows.map(r => [r.cx - halfWFn(r), r.cy]);
+      const right = rows.map(r => [r.cx + halfWFn(r), r.cy]);
+      const all   = [...left, ...[...right].reverse()];
+      const fill  = pts => {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        pts.slice(1).forEach(p => ctx.lineTo(p[0], p[1]));
+        ctx.closePath();
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+      };
+      fill(all);
+      fill(all.map(([x,y]) => [x - W, y]));
+      fill(all.map(([x,y]) => [x + W, y]));
+    }
+
+    // ── DUST HALO: 16 steps, wide outer spread, per-row pole fade ──
+    const dustSteps = [
+      // Outer warm planet-tinted halo (terracotta/sienna to match surface)
+      { extra: 700, a: 0.008, rgb:'110,52,18' }, { extra: 580, a: 0.013, rgb:'105,48,15' },
+      { extra: 480, a: 0.018, rgb:'100,44,13' }, { extra: 390, a: 0.026, rgb: '95,42,11' },
+      { extra: 310, a: 0.036, rgb: '90,40,10' }, { extra: 245, a: 0.048, rgb: '85,37,10' },
+      { extra: 190, a: 0.062, rgb: '78,34, 9' }, { extra: 145, a: 0.080, rgb: '70,30, 8' },
+      // Inner dark shoulder (packed earth / asphalt crumble)
+      { extra: 108, a: 0.100, rgb: '55,24, 6' }, { extra:  78, a: 0.125, rgb: '45,20, 5' },
+      { extra:  55, a: 0.158, rgb: '38,16, 4' }, { extra:  37, a: 0.200, rgb: '30,12, 3' },
+      { extra:  23, a: 0.255, rgb: '22, 9, 2' }, { extra:  13, a: 0.330, rgb: '16, 6, 1' },
+      { extra:   6, a: 0.430, rgb: '10, 4, 1' }, { extra:   1, a: 0.560, rgb:  '6, 2, 1' },
+    ];
+    dustSteps.forEach(({ extra, a, rgb='95,42,10' }) => {
+      for (let i = 0; i < N; i++) {
+        const fade = (rows[i].poleFade + rows[i+1].poleFade) / 2;
+        if (fade < 0.01) continue;
+        const opacity = (a * fade).toFixed(4);
+        const hw0 = (visualW / rows[i].cosL)   / 2 + extra / rows[i].cosL;
+        const hw1 = (visualW / rows[i+1].cosL) / 2 + extra / rows[i+1].cosL;
+        const pts = [
+          [rows[i].cx   - hw0, rows[i].cy],
+          [rows[i].cx   + hw0, rows[i].cy],
+          [rows[i+1].cx + hw1, rows[i+1].cy],
+          [rows[i+1].cx - hw1, rows[i+1].cy],
+        ];
+        const fill = p => {
+          ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]);
+          p.slice(1).forEach(pt=>ctx.lineTo(pt[0],pt[1]));
+          ctx.closePath(); ctx.fillStyle=`rgba(${rgb},${opacity})`; ctx.fill();
+        };
+        fill(pts);
+        fill(pts.map(([x,y])=>[x-W,y]));
+        fill(pts.map(([x,y])=>[x+W,y]));
+      }
+    });
+
+    // ── ROAD LAYERS ──
+    drawTrap(r => (visualW/r.cosL)/2 + 18/r.cosL, 'rgba(18,8,2,0.85)');        // packed earth shadow
+    drawTrap(r => (visualW/r.cosL)/2 +  8/r.cosL, 'rgba(32,14,4,0.70)');        // inner shoulder
+    // Warm sand/cream edge line — tinted to blend with terracotta planet, not stark white
+    drawTrap(r => (visualW/r.cosL)/2 +  3/r.cosL, 'rgba(220,185,130,0.90)');    // warm sand edge
+    drawTrap(r =>  visualW/r.cosL    /  2,         'rgba(30,20,10,1.0)');        // asphalt
+    drawTrap(r => (visualW/r.cosL)/2 *  0.82,      'rgba(44,30,14,0.50)');       // surface warmth
+    drawTrap(r => (visualW/r.cosL)/2 *  0.50,      'rgba(60,42,20,0.20)');       // centre highlight
+
+    // ── WHITE DASHED CENTRE LINE ──
+    for (let i = 2; i < N - 2; i++) {
+      if (i % 7 < 4) {
+        const r = rows[i], rn = rows[i+1];
+        const dashW = 11 / r.cosL;
+        const dashH = Math.abs(rn.cy - r.cy) * 0.75;
+        [-W, 0, W].forEach(offset => {
+          ctx.fillStyle = 'rgba(255,252,240,1.0)';
+          ctx.fillRect(r.cx + offset - dashW/2, r.cy - dashH/2, dashW, dashH);
+        });
+      }
+    }
+  }
+  //
+  // ══════════════════════════════════════════════════════════════════
+  // HOW TO ADD A NEW CITY:
+  //
+  // 1. Add a new entry to the ZONES array at the top of this script:
+  //      { name:"YourCity", subtitle:"Your Discipline", icon:"◆",
+  //        lat: 12, lon: 90,   ← lat≈12, lon spaced ~120° from others
+  //        color: 0xffcc00, accent: "#ffdd44",
+  //        pdf: "your_portfolio.pdf",
+  //        body: "Description.", tags: ["Tag1", "Tag2"] }
+  //
+  // 2. 3D buildings/rings/signs are auto-built by buildCity() for all ZONES.
+  //
+  // 3. Add to cityCoords below with calibrated lat/lon + accent colour.
+  //    Roads and pads auto-generate from cityCoords.
+  //
+  // 4. Best 4th city placement: lat≈12, lon≈90° (equidistant between
+  //    Forge lon=31° and Spark lon=150°).
+  //
+  // 5. UV pixel formula: x=(1-lon/360)*4096, y=(90-lat)/180*2048
+  // ══════════════════════════════════════════════════════════════════
+
+  const HUB_R = 15;
+  const N_ROAD_START = 90 - HUB_R;
+  const S_ROAD_START = -(90 - HUB_R);
+  const RW = 260;
+
+  // Calibrated city coordinates — back-calculated from in-game pixel measurements.
+  // ── TO ADD A CITY: append a new object here AND add the city to ZONES above. ──
+  // Formula: x=(1-lon/360)*4096, y=(90-lat)/180*2048
+  // Recommended 4th city: { lat: 12.0, lon: 90.0, accent: 'rgba(255,220,40,0.95)' }
+  const cityCoords = [
+    { lat: -15.0, lon:  31.55, accent: 'rgba(255,100,40,0.95)'  }, // Forge
+    { lat: -15.0, lon: 150.21, accent: 'rgba(0,210,170,0.95)'   }, // Spark
+    { lat: -15.0, lon: 269.30, accent: 'rgba(30,150,255,0.95)'  }, // Bloom
+    // { lat: 12.0, lon: 90.0, accent: 'rgba(255,220,40,0.95)' }, // ← 4th city here
+  ];
+
+  // Roads and pads auto-generated from cityCoords
+  cityCoords.forEach(({ lat, lon }) => {
+    drawTrapRoad(lon, N_ROAD_START, lat - 2, RW);
+    drawTrapRoad(lon, lat - 2, S_ROAD_START, RW);
+    const [cx, cy] = ll2px(lat, lon);
+    const cosL = Math.cos(lat * Math.PI / 180);
+    ctx.beginPath(); ctx.ellipse(cx, cy, RW*0.55, RW*0.55*cosL, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(30,20,10,1.0)'; ctx.fill();
+  });
+
+  drawPolarHub( 90, cityCoords[0].lon, HUB_R, 'rgba(255,215,40,0.95)');
+  drawPolarHub(-90, cityCoords[0].lon, HUB_R, 'rgba(255,215,40,0.95)');
+
+  cityCoords.forEach(({ lat, lon, accent }) => cityPad(lat, lon, 110, accent));
+
+  const roadTex = new THREE.CanvasTexture(rc);
+
+  const roadSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(PLANET_R + 0.04, 256, 256),
+    new THREE.MeshBasicMaterial({
+      map: roadTex, transparent: true,
+      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
+    })
+  );
+  scene.add(roadSphere);
+})();
+
+
+// Warm terrain line veins — amber and dusty rose
+(function buildCircuitLines() {
+  const lineMat  = new THREE.MeshBasicMaterial({ color:0xd4822a, transparent:true, opacity:0.20 });
+  const lineMat2 = new THREE.MeshBasicMaterial({ color:0x9944aa, transparent:true, opacity:0.14 });
+  const seed = (n) => { let x=Math.sin(n*127.1+31.4)*43758.5; return x-Math.floor(x); };
+  for (let i=0;i<40;i++) {
+    const th  = seed(i)*Math.PI*2;
+    const ph  = Math.acos(2*seed(i+100)-1);
+    const len = 0.8 + seed(i+200)*2.2;
+    const w   = 0.008 + seed(i+300)*0.015;
+    const geo = new THREE.PlaneGeometry(w, len);
+    const mat = i%3===0 ? lineMat2.clone() : lineMat.clone();
+    const mesh = new THREE.Mesh(geo, mat);
+    const nx = Math.sin(ph)*Math.cos(th);
+    const ny = Math.sin(ph)*Math.sin(th);
+    const nz = Math.cos(ph);
+    const normal = new THREE.Vector3(nx,ny,nz).normalize();
+    mesh.position.copy(normal.clone().multiplyScalar(PLANET_R+0.02));
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), normal);
+    mesh.rotation.z = seed(i+400)*Math.PI*2;
+    scene.add(mesh);
+  }
+})();
+
+// ── HELPERS ────────────────────────────────────────────────────────
+function latLonToVec3(lat,lon,r) {
+  const phi=( 90-lat)*Math.PI/180, theta=lon*Math.PI/180;
+  return new THREE.Vector3(r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.cos(theta));
+}
+function orientToNormal(n) {
+  return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), n);
+}
+
+// ── BILLBOARD TEXTURE ──────────────────────────────────────────────
+function makeBillboard(name, subtitle, hex) {
+  const W=512, H=148, c=document.createElement('canvas');
+  c.width=W; c.height=H;
+  const x=c.getContext('2d');
+
+  // BG — warm dark
+  x.fillStyle='#0e0608'; x.fillRect(0,0,W,H);
+
+  // Scanlines — subtle warm tint
+  for(let y=0;y<H;y+=3){ x.fillStyle='rgba(0,0,0,0.20)'; x.fillRect(0,y,W,1.5); }
+
+  // Neon outer border
+  x.strokeStyle=hex; x.lineWidth=3;
+  x.shadowColor=hex; x.shadowBlur=16;
+  x.strokeRect(3,3,W-6,H-6);
+
+  // Inner hairline
+  x.lineWidth=1; x.shadowBlur=0;
+  x.strokeStyle=hex+'66';
+  x.strokeRect(10,10,W-20,H-20);
+
+  // Corner brackets
+  const bL=18;
+  [[3,3],[W-3,3],[3,H-3],[W-3,H-3]].forEach(([bx,by],i) => {
+    const sx=i%2===0?1:-1, sy=i<2?1:-1;
+    x.beginPath(); x.moveTo(bx,by+sy*bL); x.lineTo(bx,by); x.lineTo(bx+sx*bL,by); x.stroke();
+  });
+
+  // Name
+  x.shadowColor=hex; x.shadowBlur=20;
+  x.fillStyle='#ffffff'; x.font='bold 52px "Courier New",monospace';
+  x.textAlign='center'; x.textBaseline='middle';
+  x.fillText(name, W/2, H*0.42);
+
+  // Divider
+  x.shadowBlur=6; x.strokeStyle=hex+'88'; x.lineWidth=1;
+  x.beginPath(); x.moveTo(30,H*0.64); x.lineTo(W-30,H*0.64); x.stroke();
+
+  // Subtitle
+  x.shadowBlur=8; x.fillStyle=hex;
+  x.font='500 22px "Courier New",monospace';
+  x.fillText(subtitle.toUpperCase(), W/2, H*0.82);
+
+  return new THREE.CanvasTexture(c);
+}
+
+// ── CITY BUILDER ───────────────────────────────────────────────────
+function buildCity(z) {
+  const surfPos   = latLonToVec3(z.lat, z.lon, PLANET_R);
+  const normal    = surfPos.clone().normalize();
+  const cityGroup = new THREE.Group();
+  // ── Dark warm asphalt pad ──
+  cityGroup.add(new THREE.Mesh(
+    new THREE.CylinderGeometry(2.9,2.9,0.10,52),
+    new THREE.MeshLambertMaterial({color:0x100806})
+  ));
+
+  // ── Ground grid ──
+  const gridMat = new THREE.MeshBasicMaterial({color:z.color,transparent:true,opacity:0.15});
+  for(let i=-3;i<=3;i++){
+    const hg=new THREE.Mesh(new THREE.PlaneGeometry(5.6,0.028),gridMat);
+    hg.rotation.x=-Math.PI/2; hg.position.set(0,0.06,i*0.48); cityGroup.add(hg);
+    const vg=new THREE.Mesh(new THREE.PlaneGeometry(0.028,5.6),gridMat);
+    vg.rotation.x=-Math.PI/2; vg.position.set(i*0.48,0.06,0); cityGroup.add(vg);
+  }
+
+  // ── Neon perimeter ring ──
+  const neonRing = new THREE.Mesh(
+    new THREE.RingGeometry(2.62,2.90,64),
+    new THREE.MeshBasicMaterial({color:z.color,side:THREE.DoubleSide,transparent:true,opacity:0.88})
+  );
+  neonRing.rotation.x=-Math.PI/2; neonRing.position.y=0.065;
+  cityGroup.add(neonRing);
+  z._neonRing = neonRing;
+
+  // Outer spinning ring
+  const outerRing = new THREE.Mesh(
+    new THREE.RingGeometry(3.05,3.20,64),
+    new THREE.MeshBasicMaterial({color:z.color,side:THREE.DoubleSide,transparent:true,opacity:0.5})
+  );
+  outerRing.rotation.x=-Math.PI/2; outerRing.position.y=0.07;
+  cityGroup.add(outerRing);
+  z._outerRing = outerRing;
+
+  // Wide faint halo
+  const haloMesh = new THREE.Mesh(
+    new THREE.RingGeometry(3.2,6.5,64),
+    new THREE.MeshBasicMaterial({color:z.color,side:THREE.DoubleSide,transparent:true,opacity:0.05})
+  );
+  haloMesh.rotation.x=-Math.PI/2; haloMesh.position.y=0.05;
+  cityGroup.add(haloMesh);
+
+  // ── Roads ──
+  const darkRoad = new THREE.MeshLambertMaterial({color:0x0c0604});
+  const neonLine = new THREE.MeshBasicMaterial({color:z.color,transparent:true,opacity:0.55});
+  for(let i=0;i<4;i++){
+    const a=(i/4)*Math.PI*2;
+    const rd=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.055,2.5),darkRoad);
+    rd.position.set(Math.cos(a)*1.35,0.055,Math.sin(a)*1.35); rd.rotation.y=a; cityGroup.add(rd);
+    const sl=new THREE.Mesh(new THREE.PlaneGeometry(0.04,2.5),neonLine);
+    sl.rotation.x=-Math.PI/2; sl.position.set(Math.cos(a)*1.35,0.085,Math.sin(a)*1.35); sl.rotation.z=a;
+    cityGroup.add(sl);
+  }
+
+  // ── Buildings ──
+  const bldgs=[
+    [0,   0,   0.58,0.58,2.1, 1.00],
+    [0.9, 0,   0.42,0.42,1.3, 0.85],
+    [-0.9,0,   0.40,0.40,1.1, 0.85],
+    [0,   0.9, 0.42,0.42,1.2, 0.85],
+    [0,  -0.9, 0.38,0.38,0.9, 0.85],
+    [1.4, 0.9, 0.30,0.30,0.72,0.70],
+    [-1.4,0.9, 0.28,0.28,0.60,0.70],
+    [1.4,-0.9, 0.32,0.32,0.78,0.70],
+    [-1.4,-0.9,0.26,0.26,0.56,0.70],
+    [0.6, 1.5, 0.24,0.24,0.52,0.62],
+    [-0.6,1.5, 0.22,0.22,0.46,0.62],
+    [0.6,-1.5, 0.26,0.26,0.54,0.62],
+    [-0.6,-1.5,0.20,0.20,0.42,0.62],
+    [1.8, 0.2, 0.18,0.18,0.36,0.55],
+    [-1.8,0.2, 0.16,0.16,0.30,0.55],
+    [0.2, 1.9, 0.18,0.18,0.34,0.55],
+    [-0.2,-1.9,0.16,0.16,0.30,0.55],
+  ];
+  const allBlds=[];
+  const t=0.035; // neon edge thickness
+  bldgs.forEach(([bx,bz,bw,bd,bh,br])=>{
+    // Solid filled body — transparent:true so opacity works on proximity
+    const bld=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd),
+      new THREE.MeshLambertMaterial({
+        color: new THREE.Color(z.color).multiplyScalar(0.18),
+        transparent:true, opacity:1.0
+      }));
+    bld.position.set(bx,bh/2+0.09,bz); bld.castShadow=true; cityGroup.add(bld); allBlds.push(bld);
+
+    const ec = new THREE.Color(z.color).clone().multiplyScalar(br);
+    const em = new THREE.MeshBasicMaterial({color:ec, transparent:true, opacity:0.90});
+
+    // Top rim
+    const tr=new THREE.Mesh(new THREE.BoxGeometry(bw+t,t,bd+t),em.clone());
+    tr.position.set(bx,bh+0.09,bz); cityGroup.add(tr); allBlds.push(tr);
+    // Corner verticals
+    [[bx-bw/2,bz-bd/2],[bx+bw/2,bz-bd/2],[bx-bw/2,bz+bd/2],[bx+bw/2,bz+bd/2]].forEach(([cx2,cz2])=>{
+      const cv=new THREE.Mesh(new THREE.BoxGeometry(t,bh,t),
+        new THREE.MeshBasicMaterial({color:ec,transparent:true,opacity:0.55}));
+      cv.position.set(cx2,bh/2+0.09,cz2); cityGroup.add(cv); allBlds.push(cv);
+    });
+  });
+
+  // ── Lights ──
+  const mainLight=new THREE.PointLight(z.color,5.0,12); mainLight.position.set(0,3.5,0); cityGroup.add(mainLight);
+  const fillLight=new THREE.PointLight(z.color,2.5,7);  fillLight.position.set(0,0.3,0); cityGroup.add(fillLight);
+
+  cityGroup.quaternion.copy(orientToNormal(normal));
+  cityGroup.position.copy(surfPos);
+  scene.add(cityGroup);
+
+  // ── Billboard sign — lives in WORLD SPACE, not cityGroup ──
+  const signWorldPos = surfPos.clone().add(normal.clone().multiplyScalar(3.6));
+  const signTex = makeBillboard(z.name, z.subtitle, z.accent);
+  const signMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.0, 0.9),
+    new THREE.MeshBasicMaterial({map:signTex, transparent:true, side:THREE.DoubleSide, depthWrite:false})
+  );
+  signMesh.position.copy(signWorldPos);
+  scene.add(signMesh);
+
+  z._group      = cityGroup;
+  z._pos        = surfPos.clone();
+  z._normal     = normal.clone();
+  z._signMesh   = signMesh;
+  z._signBase   = signWorldPos.clone(); // where sign hovers
+  z._mainLight  = mainLight;
+  z._fillLight  = fillLight;
+  z._outerRing  = outerRing;
+  z._neonRing   = neonRing;
+  z._buildings  = allBlds;
+  z._proximity  = 0;
+}
+
+ZONES.forEach(buildCity);
+
+// ── CAR MODEL ────────────────────────────────────────────────────────
+// Low-poly car with curved underside to hug the planet surface.
+// CAR_CURVE compensates for the sagitta (drop) across the 2-unit car length.
+// Sagitta = R - sqrt(R²-(L/2)²) ≈ 0.0625 units of drop at front/rear vs centre.
+// We curve the body geometry vertices and offset wheel mounts to match.
+const carGroup = new THREE.Group();
+const CAR_CURVE = 0.055; // how much front/rear dip below centre (tuned for visual fit)
+
+// Helper: build a curved box by warping a PlaneGeometry into a slight arc along Z
+function curvedBodyGeo(w, h, d, segs) {
+  const geo = new THREE.BoxGeometry(w, h, d, 1, 1, segs);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i);
+    // Parabolic sag: most at front/rear (|z|=d/2), zero at centre
+    const sag = CAR_CURVE * (z / (d * 0.5)) * (z / (d * 0.5));
+    pos.setY(i, pos.getY(i) - sag);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// Main body — curved bottom
+const carBody = new THREE.Mesh(
+  curvedBodyGeo(1.1, 0.28, 2.0, 8),
+  new THREE.MeshLambertMaterial({color:0x1a0e08})
+);
+carBody.position.y = 0.15; carBody.castShadow = true; carGroup.add(carBody);
+
+// Canopy — flat, sits on top centre
+const canopy = new THREE.Mesh(
+  new THREE.BoxGeometry(0.82, 0.20, 1.0),
+  new THREE.MeshLambertMaterial({color:0x120a05})
+);
+canopy.position.set(0, 0.38, -0.15); carGroup.add(canopy);
+
+// Windscreens
+const windMat = new THREE.MeshLambertMaterial({color:0x221208,transparent:true,opacity:0.85,emissive:0x110804,emissiveIntensity:1});
+const ws = new THREE.Mesh(new THREE.BoxGeometry(0.76,0.17,0.06), windMat);
+ws.position.set(0, 0.37, 0.38); carGroup.add(ws);
+const rw = new THREE.Mesh(new THREE.BoxGeometry(0.76,0.15,0.06), windMat);
+rw.position.set(0, 0.35, -0.71); carGroup.add(rw);
+
+// Amber underglow strip — also curved
+const glowStrip = new THREE.Mesh(
+  curvedBodyGeo(1.12, 0.03, 2.02, 8),
+  new THREE.MeshBasicMaterial({color:0xff9922, transparent:true, opacity:0.9})
+);
+glowStrip.position.y = 0.005; carGroup.add(glowStrip);
+
+// Side amber stripes
+const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.03,0.04,1.8),
+  new THREE.MeshBasicMaterial({color:0xff9922,transparent:true,opacity:0.75}));
+sideL.position.set(-0.565, 0.16, 0); carGroup.add(sideL);
+const sideR = sideL.clone(); sideR.position.set(0.565, 0.16, 0); carGroup.add(sideR);
+
+// Wheels — drop front/rear by CAR_CURVE to sit flush on curved body bottom
+// Centre wheels at y=0 (ground level), front/rear dip by the sag amount
+const wheelGeo = new THREE.CylinderGeometry(0.20, 0.20, 0.16, 20);
+const wheelMat = new THREE.MeshLambertMaterial({color:0x0e0808});
+const rimGeo   = new THREE.CylinderGeometry(0.20, 0.20, 0.02, 20);
+const rimMat   = new THREE.MeshBasicMaterial({color:0xff9922});
+const hubGeo   = new THREE.CylinderGeometry(0.08, 0.08, 0.18, 10);
+const hubMat   = new THREE.MeshLambertMaterial({color:0x181008});
+const wheels = [];
+
+// Wheel positions: [x, z] — y is computed from curvature
+[[-0.62, 0.70],[0.62, 0.70],[-0.62,-0.70],[0.62,-0.70]].forEach(([x, wz]) => {
+  // Sag at this wheel's z position
+  const sag = CAR_CURVE * (wz / 1.0) * (wz / 1.0);
+  const wy  = -sag; // wheel group sits at body bottom minus sag
+  const wg = new THREE.Group();
+  const wm = new THREE.Mesh(wheelGeo, wheelMat); wm.rotation.z = Math.PI/2; wg.add(wm);
+  const rm = new THREE.Mesh(rimGeo,   rimMat);   rm.rotation.z = Math.PI/2; wg.add(rm);
+  const hm = new THREE.Mesh(hubGeo,   hubMat);   hm.rotation.z = Math.PI/2; wg.add(hm);
+  wg.position.set(x, wy, wz);
+  wg.castShadow = true;
+  carGroup.add(wg);
+  wheels.push(wg);
+});
+
+// Headlights — lowered to match front curve sag
+const frontSag = CAR_CURVE; // at z=1.0
+const hlMat = new THREE.MeshBasicMaterial({color:0xffdd88,transparent:true,opacity:1.0});
+[[-0.38, 1.01],[0.38, 1.01]].forEach(([x, lz]) => {
+  const hl = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.05,0.04), hlMat);
+  hl.position.set(x, 0.16 - frontSag, lz); carGroup.add(hl);
+});
+const hlL = new THREE.PointLight(0xffee99, 1.5, 4);
+hlL.position.set(-0.35, 0.2 - frontSag, 1.1); carGroup.add(hlL);
+const hlR = new THREE.PointLight(0xffee99, 1.5, 4);
+hlR.position.set( 0.35, 0.2 - frontSag, 1.1); carGroup.add(hlR);
+
+// Tail lights — same sag on rear
+const tlMat = new THREE.MeshBasicMaterial({color:0xff3300,transparent:true,opacity:1.0});
+[[-0.38,-1.01],[0.38,-1.01]].forEach(([x, lz]) => {
+  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.05,0.04), tlMat);
+  tl.position.set(x, 0.16 - frontSag, lz); carGroup.add(tl);
+});
+
+scene.add(carGroup);
+
+// ── CAR STATE ──────────────────────────────────────────────────────
+// carNormal  = unit vector from planet centre to car (the car's "up")
+// carForward = unit vector in the tangent plane the car faces
+// These are the ONLY two state vectors needed.
+let carNormal  = new THREE.Vector3(0, 1, 0);
+let carForward = new THREE.Vector3(0, 0, 1);
+let carSpeed   = 0;
+
+const MAX_SPEED  = 0.2;
+const ACCEL      = 0.01;
+const FRICTION   = 0.87;
+const TURN_SPEED = 0.055;
+
+// ── CAMERA STATE ───────────────────────────────────────────────────
+let camPos    = new THREE.Vector3(0, PLANET_R + 8, -10);
+let camTarget = new THREE.Vector3(0, PLANET_R, 0);
+
+// ── INPUT ──────────────────────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Enter'].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+let panelOpen=false, nearZone=null, lastBanner=null, bannerTimer;
+
+// ── UI ─────────────────────────────────────────────────────────────
+function showBanner(txt) {
+  const el=document.getElementById('banner');
+  el.textContent=txt; el.classList.add('show');
+  clearTimeout(bannerTimer);
+  bannerTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ── PDF VIEWER ─────────────────────────────────────────────────────
+// Renders PDF portfolios using PDF.js. Pages rendered to <canvas> with
+// a manual annotation layer to restore clickable links (PDF.js CDN build
+// does not export AnnotationLayer, so links are injected via getAnnotations).
+let _pdfDoc = null, _pdfPage = 1, _pdfZoom = 1.0, _pdfRendering = false;
+
+function _pdfRender() {
+  if (!_pdfDoc || _pdfRendering) return;
+  _pdfRendering = true;
+  document.getElementById('pdf-loading').style.display = 'none';
+  _pdfDoc.getPage(_pdfPage).then(page => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const vp = page.getViewport({ scale: _pdfZoom * dpr });
+    const canvas = document.getElementById('pdf-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width  = vp.width;
+    canvas.height = vp.height;
+    canvas.style.width  = (vp.width  / dpr) + 'px';
+    canvas.style.height = (vp.height / dpr) + 'px';
+    page.render({ canvasContext: ctx, viewport: vp }).promise.then(() => {
+      _pdfRendering = false;
+      document.getElementById('pdf-page-info').textContent =
+        `${_pdfPage} / ${_pdfDoc.numPages}`;
+      document.getElementById('pdf-prev').disabled = _pdfPage <= 1;
+      document.getElementById('pdf-next').disabled = _pdfPage >= _pdfDoc.numPages;
+      document.getElementById('pdf-zoom-info').textContent =
+        Math.round(_pdfZoom * 100) + '%';
+
+      // Render clickable links by manually mapping annotation rects onto the canvas
+      const annotDiv = document.getElementById('pdf-annotation-layer');
+      annotDiv.innerHTML = '';
+      const displayVp = page.getViewport({ scale: _pdfZoom });
+      annotDiv.style.width  = displayVp.width  + 'px';
+      annotDiv.style.height = displayVp.height + 'px';
+      page.getAnnotations({ intent: 'display' }).then(annotations => {
+        annotations.forEach(ann => {
+          if (ann.subtype !== 'Link') return;
+          // Determine the URL
+          let url = null;
+          if (ann.url) {
+            url = ann.url;
+          } else if (ann.unsafeUrl) {
+            url = ann.unsafeUrl;
+          } else {
+            return; // skip internal/dest links
+          }
+          // Transform PDF rect [x1,y1,x2,y2] into screen coords
+          const [x1, y1, x2, y2] = pdfjsLib.Util.normalizeRect(ann.rect);
+          const [sx1, sy1] = displayVp.convertToViewportPoint(x1, y1);
+          const [sx2, sy2] = displayVp.convertToViewportPoint(x2, y2);
+          const left   = Math.min(sx1, sx2);
+          const top    = Math.min(sy1, sy2);
+          const width  = Math.abs(sx2 - sx1);
+          const height = Math.abs(sy2 - sy1);
+          const a = document.createElement('a');
+          a.href   = url;
+          a.target = '_blank';
+          a.rel    = 'noopener noreferrer';
+          a.style.cssText = [
+            'position:absolute',
+            `left:${left}px`,
+            `top:${top}px`,
+            `width:${width}px`,
+            `height:${height}px`,
+            'cursor:pointer',
+            'display:block',
+          ].join(';');
+          annotDiv.appendChild(a);
+        });
+      });
+    }).catch(e => { _pdfRendering = false; console.warn('PDF render error:', e); });
+  }).catch(e => { _pdfRendering = false; console.warn('PDF page error:', e); });
+}
+
+function pdfPage(delta) {
+  if (!_pdfDoc) return;
+  const next = _pdfPage + delta;
+  if (next < 1 || next > _pdfDoc.numPages) return;
+  _pdfPage = next;
+  _pdfRender();
+  _updateThumbnailActive();
+}
+
+function pdfZoom(delta) {
+  _pdfZoom = Math.max(0.5, Math.min(3.0, _pdfZoom + delta));
+  _pdfRender();
+}
+
+// Thumbnail generation and navigation
+function _generateThumbnails(doc) {
+  const sidebar = document.getElementById('pdf-sidebar');
+  sidebar.innerHTML = ''; // Clear existing thumbnails
+  
+  const thumbScale = 0.3;
+  const promises = [];
+  
+  for (let i = 1; i <= doc.numPages; i++) {
+    promises.push(
+      doc.getPage(i).then(page => {
+        const viewport = page.getViewport({ scale: thumbScale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        
+        return page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pdf-thumb';
+          if (i === _pdfPage) wrapper.classList.add('active');
+          wrapper.dataset.page = i;
+          
+          const label = document.createElement('div');
+          label.className = 'pdf-thumb-label';
+          label.textContent = i;
+          
+          wrapper.appendChild(canvas);
+          wrapper.appendChild(label);
+          
+          wrapper.onclick = () => {
+            _pdfPage = i;
+            _pdfRender();
+            _updateThumbnailActive();
+          };
+          
+          return { page: i, element: wrapper };
+        });
+      })
+    );
+  }
+  
+  Promise.all(promises).then(results => {
+    // Sort by page number and append in order
+    results.sort((a, b) => a.page - b.page);
+    results.forEach(r => sidebar.appendChild(r.element));
+  });
+}
+
+function _updateThumbnailActive() {
+  const thumbs = document.querySelectorAll('.pdf-thumb');
+  thumbs.forEach(thumb => {
+    const pageNum = parseInt(thumb.dataset.page);
+    if (pageNum === _pdfPage) {
+      thumb.classList.add('active');
+      // Scroll thumbnail into view
+      thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      thumb.classList.remove('active');
+    }
+  });
+}
+
+// PDF Sidebar Toggle
+function togglePdfSidebar() {
+  const sidebar = document.getElementById('pdf-sidebar');
+  const toggle = document.getElementById('pdf-sidebar-toggle');
+  const mainArea = document.getElementById('pdf-main-area');
+  const canvas = document.getElementById('pdf-canvas');
+  const isOpen = sidebar.classList.toggle('open');
+  toggle.classList.toggle('open');
+  toggle.textContent = isOpen ? '◀' : '▶';
+  
+  // Scale content to fit when sidebar is open
+  if (isOpen) {
+    // Sidebar is 180px wide, so scale content to fit remaining space
+    const scaleRatio = (window.innerWidth - 180) / window.innerWidth;
+    mainArea.style.transform = `translateX(180px) scale(${scaleRatio})`;
+    mainArea.style.transformOrigin = 'left center';
+  } else {
+    mainArea.style.transform = '';
+    mainArea.style.transformOrigin = '';
+  }
+}
+
+function openPanel(zone) {
+  if (panelOpen) return;
+  panelOpen = true;
+
+  // Spark uses the slideshow viewer instead of PDF
+  if (zone.name === 'Spark') {
+    openSlideshow();
+    return;
+  }
+
+  const ov = document.getElementById('pdf-overlay');
+  ov.style.setProperty('--pdf-accent', zone.accent);
+  ov.style.setProperty('--pdf-accent-dim', zone.accent + '22');
+  document.getElementById('pdf-zone-name').textContent = `${zone.name} — ${zone.subtitle}`;
+  document.getElementById('pdf-zone-name').style.color = zone.accent;
+
+  // Reset state
+  _pdfDoc = null; _pdfPage = 1; _pdfZoom = 1.0; _pdfRendering = false;
+  const canvas = document.getElementById('pdf-canvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  const pdfSidebar = document.getElementById('pdf-sidebar');
+  pdfSidebar.innerHTML = ''; // Clear thumbnails
+  pdfSidebar.classList.remove('open'); // Start closed
+  document.getElementById('pdf-sidebar-toggle').classList.remove('open');
+  document.getElementById('pdf-sidebar-toggle').textContent = '▶';  // Expand arrow when closed
+  document.getElementById('pdf-loading').style.display = 'flex';
+  document.getElementById('pdf-page-info').textContent = '— / —';
+  document.getElementById('pdf-zoom-info').textContent = '100%';
+
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ov.classList.add('open', 'visible');
+    // Show tutorial after opening
+    const navTut = document.getElementById('nav-tutorial');
+    setTimeout(() => {
+      navTut.classList.add('show');
+      setTimeout(() => navTut.classList.remove('show'), 5000);
+    }, 600);
+  }));
+
+  if (zone.pdf) {
+    document.getElementById('pdf-download').href = zone.pdf;
+    document.getElementById('pdf-download').style.display = '';
+
+    // Detect file:// protocol — PDF.js cannot load local files this way
+    if (window.location.protocol === 'file:') {
+      document.getElementById('pdf-loading').textContent =
+        'To view PDFs, open this file via a local server. In your terminal: cd to this folder, then run: python3 -m http.server 8000 — then visit localhost:8000';
+      return;
+    }
+
+    // Build absolute URL relative to this page's location
+    const base = window.location.href.replace(/\/[^\/]*$/, '/');
+    const pdfUrl = base + zone.pdf;
+    const docPromise = (_pdfCache && _pdfCache[zone.pdf]) ? _pdfCache[zone.pdf] : pdfjsLib.getDocument({ url: pdfUrl }).promise;
+    docPromise.then(doc => {
+      _pdfDoc = doc;
+      _pdfRender();
+      _generateThumbnails(doc);
+    }).catch(err => {
+      console.warn('[Portfolio] PDF load error:', err);
+      document.getElementById('pdf-loading').textContent =
+        'PDF not found — make sure ' + zone.pdf + ' is in the same folder as this HTML file';
+    });
+  } else {
+    document.getElementById('pdf-download').style.display = 'none';
+    document.getElementById('pdf-loading').textContent =
+      'Work coming soon for this district.';
+  }
+}
+
+// ── SLIDESHOW (Spark) ──────────────────────────────────────────────
+let sCur = 0;
+let sZoom = 1.0;
+const S_TOTAL = 25;
+const sSlides = document.querySelectorAll('.sslide');
+
+function sUpdateUI() {
+  document.getElementById('slide-page-info').textContent = (sCur + 1) + ' / ' + S_TOTAL;
+  document.getElementById('slide-prev').disabled = sCur <= 0;
+  document.getElementById('slide-next').disabled = sCur >= S_TOTAL - 1;
+}
+
+function sGoTo(n) {
+  sSlides[sCur].classList.remove('active');
+  sCur = ((n % S_TOTAL) + S_TOTAL) % S_TOTAL;
+  sSlides[sCur].classList.add('active');
+  sUpdateUI();
+  _updateSlideThumbnailActive();
+}
+function sGo(dir) { sGoTo(sCur + dir); }
+
+function slideZoom(delta) {
+  sZoom = Math.max(0.5, Math.min(3.0, sZoom + delta));
+  document.getElementById('slide-stage').style.transform = 'scale(' + sZoom + ')';
+  document.getElementById('slide-stage').style.transformOrigin = 'center center';
+  document.getElementById('slide-zoom-info').textContent = Math.round(sZoom * 100) + '%';
+  document.getElementById('slide-zoom-out').disabled = sZoom <= 0.5;
+  document.getElementById('slide-zoom-in').disabled  = sZoom >= 3.0;
+}
+
+// Slideshow thumbnail generation
+function _generateSlideThumbnails() {
+  const sidebar = document.getElementById('slide-sidebar');
+  sidebar.innerHTML = ''; // Clear existing
+  
+  sSlides.forEach((slide, i) => {
+    const img = slide.querySelector('.sslide-bg');
+    if (!img) return;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'slide-thumb';
+    if (i === sCur) wrapper.classList.add('active');
+    wrapper.dataset.index = i;
+    
+    const thumbImg = document.createElement('img');
+    thumbImg.src = img.src;
+    thumbImg.alt = 'Slide ' + (i + 1);
+    
+    const label = document.createElement('div');
+    label.className = 'slide-thumb-label';
+    label.textContent = i + 1;
+    
+    wrapper.appendChild(thumbImg);
+    wrapper.appendChild(label);
+    
+    wrapper.onclick = () => { sGoTo(i); };
+    
+    sidebar.appendChild(wrapper);
+  });
+}
+
+function _updateSlideThumbnailActive() {
+  const thumbs = document.querySelectorAll('.slide-thumb');
+  thumbs.forEach(thumb => {
+    const index = parseInt(thumb.dataset.index);
+    if (index === sCur) {
+      thumb.classList.add('active');
+      thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      thumb.classList.remove('active');
+    }
+  });
+}
+
+// Slideshow Sidebar Toggle
+function toggleSlideSidebar() {
+  const sidebar = document.getElementById('slide-sidebar');
+  const toggle = document.getElementById('slide-sidebar-toggle');
+  const mainArea = document.getElementById('slide-main-area');
+  const isOpen = sidebar.classList.toggle('open');
+  toggle.classList.toggle('open');
+  toggle.textContent = isOpen ? '◀' : '▶';
+  
+  // Scale content to fit when sidebar is open
+  if (isOpen) {
+    // Sidebar is 180px wide, so scale content to fit remaining space
+    const scaleRatio = (window.innerWidth - 180) / window.innerWidth;
+    mainArea.style.transform = `translateX(180px) scale(${scaleRatio})`;
+    mainArea.style.transformOrigin = 'left center';
+  } else {
+    mainArea.style.transform = '';
+    mainArea.style.transformOrigin = '';
+  }
+}
+
+function openSlideshow() {
+  const ov = document.getElementById('slide-overlay');
+  sZoom = 1.0;
+  document.getElementById('slide-stage').style.transform = '';
+  document.getElementById('slide-zoom-info').textContent = '100%';
+  document.getElementById('slide-zoom-out').disabled = false;
+  document.getElementById('slide-zoom-in').disabled  = false;
+  sGoTo(0);
+  
+  // Reset sidebar state
+  const slideSidebar = document.getElementById('slide-sidebar');
+  slideSidebar.classList.remove('open');
+  document.getElementById('slide-sidebar-toggle').classList.remove('open');
+  document.getElementById('slide-sidebar-toggle').textContent = '▶';  // Expand arrow when closed
+  
+  _generateSlideThumbnails();
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ov.classList.add('open', 'visible');
+    // Show tutorial after opening
+    const slideTut = document.getElementById('slide-tutorial');
+    setTimeout(() => {
+      slideTut.classList.add('show');
+      setTimeout(() => slideTut.classList.remove('show'), 5000);
+    }, 600);
+  }));
+}
+
+function closeSlideshow() {
+  panelOpen = false;
+  const ov = document.getElementById('slide-overlay');
+  ov.classList.remove('visible');
+  setTimeout(() => { ov.classList.remove('open'); ov.style.display = 'none'; }, 320);
+  if (fromMenu) { fromMenu = false; showMenu(); return; }
+  Object.keys(keys).forEach(k => keys[k] = false);
+}
+
+// Arrow keys for PDF navigation
+document.addEventListener('keydown', e => {
+  const pdfOv = document.getElementById('pdf-overlay');
+  if (!pdfOv.classList.contains('visible')) return;
+  if (['ArrowRight', 'ArrowDown'].includes(e.key)) { e.preventDefault(); pdfPage(1); }
+  else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) { e.preventDefault(); pdfPage(-1); }
+  else if (e.key === 'Escape') { closePanel(); }
+});
+
+// Arrow keys also work inside the slideshow
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('slide-overlay');
+  if (!ov.classList.contains('visible')) return;
+  if (['ArrowRight', 'ArrowDown'].includes(e.key)) { e.preventDefault(); sGo(1); }
+  else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) { e.preventDefault(); sGo(-1); }
+  else if (e.key === 'Escape') { closeSlideshow(); }
+});
+
+function closePanel() {
+  panelOpen = false;
+  const ov = document.getElementById('pdf-overlay');
+  const navTut = document.getElementById('nav-tutorial');
+  ov.classList.remove('visible');
+  navTut.classList.remove('show');
+  setTimeout(() => { ov.classList.remove('open'); ov.style.display = 'none'; }, 320);
+  if (fromMenu) { fromMenu = false; showMenu(); return; }
+  Object.keys(keys).forEach(k => keys[k] = false);
+}
+
+// ── MINIMAP ────────────────────────────────────────────────────────
+const mmCanvas = document.getElementById('minimap-canvas');
+const mmCtx    = mmCanvas.getContext('2d');
+const MM = 55; // centre px
+
+function drawMinimap() {
+  mmCtx.clearRect(0,0,110,110);
+
+  // Planet circle
+  mmCtx.beginPath(); mmCtx.arc(MM,MM,46,0,Math.PI*2);
+  mmCtx.fillStyle='#140a06'; mmCtx.fill();
+  mmCtx.strokeStyle='#ff882222'; mmCtx.lineWidth=1; mmCtx.stroke();
+
+  // Grid lines
+  mmCtx.strokeStyle='#ff88220a'; mmCtx.lineWidth=0.5;
+  for(let g=-3;g<=3;g++){
+    const gx=MM+g*13, gy=MM+g*13;
+    mmCtx.beginPath(); mmCtx.moveTo(gx,MM-46); mmCtx.lineTo(gx,MM+46); mmCtx.stroke();
+    mmCtx.beginPath(); mmCtx.moveTo(MM-46,gy); mmCtx.lineTo(MM+46,gy); mmCtx.stroke();
+  }
+
+  // Clip to planet circle
+  mmCtx.save();
+  mmCtx.beginPath(); mmCtx.arc(MM,MM,44,0,Math.PI*2); mmCtx.clip();
+
+  // Zone dots — project lat/lon onto 2D circle
+  ZONES.forEach(z => {
+    // Convert surface pos normal to 2D minimap coords
+    // Use orthographic projection looking down from carNormal perspective
+    // Simple: dot with two tangent axes of carNormal to get x/y offset on disc
+    const zn = z._pos.clone().normalize();
+    // u axis = carRight, v axis = -camForward projected flat
+    const u = new THREE.Vector3().crossVectors(carNormal, new THREE.Vector3(0,1,0.001).normalize()).normalize();
+    const v = new THREE.Vector3().crossVectors(u, carNormal).normalize();
+    const dx = zn.dot(u);
+    const dy = -zn.dot(v);
+    const px = MM + dx * 40;
+    const py = MM + dy * 40;
+
+    // Glow
+    const grad = mmCtx.createRadialGradient(px,py,0,px,py,7);
+    grad.addColorStop(0, z.accent+'cc');
+    grad.addColorStop(1, z.accent+'00');
+    mmCtx.beginPath(); mmCtx.arc(px,py,7,0,Math.PI*2);
+    mmCtx.fillStyle=grad; mmCtx.fill();
+
+    // Dot
+    mmCtx.beginPath(); mmCtx.arc(px,py,2.5,0,Math.PI*2);
+    mmCtx.fillStyle=z.accent; mmCtx.fill();
+
+    // Label
+    mmCtx.fillStyle=z.accent+'cc'; mmCtx.font='bold 7px monospace';
+    mmCtx.textAlign='center'; mmCtx.fillText(z.name.split('//')[0], px, py-8);
+  });
+
+  // Car dot — always at centre (we're car-relative)
+  mmCtx.beginPath(); mmCtx.arc(MM,MM,3.5,0,Math.PI*2);
+  mmCtx.fillStyle='#ffeecc'; mmCtx.fill();
+
+  // Heading arrow
+  mmCtx.strokeStyle='#ffeecc'; mmCtx.lineWidth=1.5;
+  mmCtx.beginPath(); mmCtx.moveTo(MM,MM); mmCtx.lineTo(MM,MM-10); mmCtx.stroke();
+  mmCtx.beginPath(); mmCtx.moveTo(MM-3,MM-7); mmCtx.lineTo(MM,MM-11); mmCtx.lineTo(MM+3,MM-7); mmCtx.stroke();
+
+  mmCtx.restore();
+
+  // Outer ring border
+  mmCtx.beginPath(); mmCtx.arc(MM,MM,47,0,Math.PI*2);
+  mmCtx.strokeStyle='#ff883322'; mmCtx.lineWidth=1.5; mmCtx.stroke();
+}
+
+// ── TYRE TRAILS ─────────────────────────────────────────────────────
+// Particle trails at each wheel position. Points accumulate while moving
+// and fade out when the car is stationary.
+const TRAIL_LEN = 80;
+const trailData = [
+  { pts:[], lastPos: new THREE.Vector3() },
+  { pts:[], lastPos: new THREE.Vector3() },
+  { pts:[], lastPos: new THREE.Vector3() },
+  { pts:[], lastPos: new THREE.Vector3() },
+];
+// Offsets in car-local space for each wheel (matches wheel positions)
+// Wheel contact points on planet surface — front/rear drop by CAR_CURVE sag
+const _wc = CAR_CURVE; // wheel sag matches body curve
+const WHEEL_OFFSETS = [
+  new THREE.Vector3(-0.62, -CAR_HOVER+0.01 - _wc,  0.70),
+  new THREE.Vector3( 0.62, -CAR_HOVER+0.01 - _wc,  0.70),
+  new THREE.Vector3(-0.62, -CAR_HOVER+0.01 - _wc, -0.70),
+  new THREE.Vector3( 0.62, -CAR_HOVER+0.01 - _wc, -0.70),
+];
+
+// Each trail is a Points cloud — we'll update their positions each frame
+const trailGeos   = [];
+const trailMeshes = [];
+const TRAIL_COLOR = 0xcc8833;
+
+trailData.forEach((_,wi)=>{
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(TRAIL_LEN * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setDrawRange(0, 0);
+  const mat = new THREE.PointsMaterial({
+    color: TRAIL_COLOR, size: 0.07, sizeAttenuation: true,
+    transparent: true, opacity: 0.55, depthWrite: false
+  });
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  trailGeos.push(geo);
+  trailMeshes.push(pts);
+});
+
+// ── UPDATE ─────────────────────────────────────────────────────────
+// Gram-Schmidt: keep carForward perpendicular to carNormal
+function reortho() {
+  carForward.addScaledVector(carNormal, -carForward.dot(carNormal)).normalize();
+}
+
+const _vignette = document.getElementById('vignette');
+let baseFOV = 65;
+
+function update() {
+  if (panelOpen) return;
+  const time = performance.now() * 0.001;
+
+  // ── 1. Keep carForward tangent ──
+  reortho();
+
+  // ── 2. Steer: spin carForward around carNormal (pure yaw, no translation) ──
+  if (keys['ArrowLeft'])  { carForward.applyAxisAngle(carNormal,  TURN_SPEED); reortho(); }
+  if (keys['ArrowRight']) { carForward.applyAxisAngle(carNormal, -TURN_SPEED); reortho(); }
+
+  // ── 3. Throttle ──
+  if      (keys['ArrowUp'])   carSpeed = Math.min(carSpeed + ACCEL, MAX_SPEED);
+  else if (keys['ArrowDown']) carSpeed = Math.max(carSpeed - ACCEL * 2, -MAX_SPEED * 0.5);
+  else                        carSpeed *= FRICTION;
+
+  // ── 4. Translate on sphere ──
+  // Rotate carNormal toward carForward by dAngle.
+  // moveAxis = cross(carForward, carNormal) is the axis that, when rotated positively,
+  // swings carNormal in the carForward direction.
+  if (Math.abs(carSpeed) > 1e-6) {
+    const moveAxis = new THREE.Vector3().crossVectors(carNormal, carForward).normalize();
+    const dAngle   = carSpeed / PLANET_R;
+    carNormal .applyAxisAngle(moveAxis, dAngle).normalize();
+    carForward.applyAxisAngle(moveAxis, dAngle).normalize();
+    reortho();
+  }
+
+  // ── 5. Place car ──
+  const worldPos = carNormal.clone().multiplyScalar(PLANET_R + CAR_HOVER);
+  carGroup.position.copy(worldPos);
+
+  // ── DEBUG: lat/lon/UV readout ──
+  (function() {
+    const dbg = document.getElementById('debug-coords');
+    if (!dbg || dbg.style.display === 'none') return;
+    // carNormal is a unit vector from planet centre to car
+    // Convert to lat/lon matching latLonToVec3: x=sin(phi)*sin(theta), y=cos(phi), z=sin(phi)*cos(theta)
+    // phi = 90-lat in radians → lat = 90 - phi_deg
+    const n = carNormal;
+    const lat = Math.asin(Math.max(-1, Math.min(1, n.y))) * 180 / Math.PI;
+    // theta = lon in radians → lon from atan2(x, z)
+    const lon = Math.atan2(n.x, n.z) * 180 / Math.PI;
+    const lonNorm = ((lon % 360) + 360) % 360;
+    // THREE SphereGeometry UV: u = 1 - lon/360, v = (90-lat)/180
+    const u = 1 - lonNorm / 360;
+    const v = (90 - lat) / 180;
+    const px = Math.round(u * 4096);
+    const py = Math.round(v * 2048);
+    dbg.textContent =
+      `LAT ${lat.toFixed(2).padStart(7)}°  LON ${lonNorm.toFixed(2).padStart(7)}°\n` +
+      `  U ${u.toFixed(4)}    V ${v.toFixed(4)}\n` +
+      `  PX x=${px}  y=${py}  (4096×2048)`;
+  })();
+
+  // ── 6. Orient car mesh ──
+  // carNormal = up (+Y), carForward = forward (+Z), right = cross(carNormal, carForward) = +X
+  const meshRight = new THREE.Vector3().crossVectors(carNormal, carForward).normalize();
+  carGroup.quaternion.setFromRotationMatrix(
+    new THREE.Matrix4().makeBasis(meshRight, carNormal, carForward)
+  );
+
+  // ── 7. Spin wheels ──
+  wheels.forEach(wg => { wg.rotation.x += carSpeed * 10; });
+
+  // ── 8. Camera: fixed offset behind + above car, smooth lerp ──
+  const idealPos = worldPos.clone()
+    .addScaledVector(carForward, -9.0)   // behind
+    .addScaledVector(carNormal,   4.0);  // above surface
+  const idealTarget = worldPos.clone()
+    .addScaledVector(carForward,  1.5)   // slightly ahead
+    .addScaledVector(carNormal,   0.5);
+
+  camPos.lerp(idealPos,     0.08);
+  camTarget.lerp(idealTarget, 0.10);
+  camera.position.copy(camPos);
+  camera.up.copy(carNormal);  // horizon always level to planet surface
+  camera.lookAt(camTarget);
+
+  // 9. FOV PULSE at speed — expand FOV as car accelerates
+  const speedRatio = Math.abs(carSpeed) / MAX_SPEED;
+  const targetFOV  = baseFOV + speedRatio * 14;           // up to +14° at full throttle
+  camera.fov += (targetFOV - camera.fov) * 0.08;
+  camera.updateProjectionMatrix();
+
+  // Vignette darkens with speed
+  _vignette.style.opacity = (speedRatio * 0.7).toFixed(3);
+
+  // 10. Billboard signs — face camera with NO roll: up is locked to surface normal
+  ZONES.forEach((z, i) => {
+    if (!z._signMesh) return;
+    const floatOffset = Math.sin(time * 1.2 + i) * 0.09;
+    const prox = z._proximity;
+    z._signMesh.position.copy(
+      z._signBase.clone().addScaledVector(z._normal, 0.25 * prox + floatOffset)
+    );
+    // Project camera direction onto the tangent plane of the surface normal.
+    // This gives us a yaw-only facing — the sign pivots left/right but never rolls.
+    const toCamera = new THREE.Vector3().subVectors(camera.position, z._signMesh.position);
+    // Remove the component along the surface normal (flatten to tangent plane)
+    toCamera.addScaledVector(z._normal, -toCamera.dot(z._normal)).normalize();
+    // right = cross(surfaceNormal, flatToCamera) — perpendicular, in tangent plane
+    const right = new THREE.Vector3().crossVectors(z._normal, toCamera).normalize();
+    // Build basis: +X=right, +Y=surfaceNormal (up, locked), +Z=flatToCamera (facing)
+    z._signMesh.quaternion.setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(right, z._normal, toCamera)
+    );
+    z._signMesh.material.needsUpdate = true;
+  });
+
+  // 11. TYRE TRAILS — append world-space wheel positions when moving
+  const isMoving = Math.abs(carSpeed) > 0.003;
+  WHEEL_OFFSETS.forEach((localOff, wi) => {
+    // Transform local offset to world space using carGroup matrix
+    const worldOff = localOff.clone().applyMatrix4(carGroup.matrixWorld);
+    // Project onto planet surface
+    const onSurface = worldOff.clone().normalize().multiplyScalar(PLANET_R + 0.015);
+
+    const td = trailData[wi];
+    if(isMoving) {
+      td.pts.unshift(onSurface.clone());
+      if(td.pts.length > TRAIL_LEN) td.pts.pop();
+    }
+
+    // Update geometry
+    const geo  = trailGeos[wi];
+    const posAttr = geo.attributes.position;
+    td.pts.forEach((p, pi) => {
+      posAttr.setXYZ(pi, p.x, p.y, p.z);
+    });
+    posAttr.needsUpdate = true;
+    geo.setDrawRange(0, td.pts.length);
+
+    // Fade opacity with speed (no trails when parked)
+    trailMeshes[wi].material.opacity = Math.min(0.55, speedRatio * 0.8);
+  });
+
+  // 12. Zone proximity + city effects
+  nearZone=null; let bestD=Infinity;
+  ZONES.forEach((z,i)=>{
+    const dist=carNormal.distanceTo(z._pos.clone().normalize());
+    if(dist<0.65&&dist<bestD){bestD=dist;nearZone=z;}
+
+    const targetProx=dist<0.55?Math.min(1,(0.55-dist)/0.35):0;
+    z._proximity+=(targetProx-z._proximity)*0.06;
+    const prox=z._proximity;
+    const pulse=1+Math.sin(time*2.5+i*2.1)*0.85;
+
+    z._mainLight.intensity = (5.0+prox*3.5)*pulse;
+    z._fillLight.intensity = (2.5+prox*2.0)*pulse;
+
+    if(z._outerRing) { z._outerRing.rotation.z+=0.004+prox*0.05; z._outerRing.material.opacity=0.5+prox*0.4; z._outerRing.material.needsUpdate=true; }
+    if(z._neonRing)  { z._neonRing.material.opacity=(0.88-prox*0.5)*(0.9+Math.sin(time*3+i)*0.1); z._neonRing.material.needsUpdate=true; }
+
+    // Buildings fade to near-invisible as car enters
+    if(z._buildings) z._buildings.forEach(b=>{
+      b.material.opacity = 1 - prox * 0.92;
+      b.material.needsUpdate = true;
+    });
+
+    // Sign: scale up, glow brighter — pulse synced exactly with city structural flash
+    if(z._signMesh) {
+      const signScale = 1.0 + prox * 1.2;
+      z._signMesh.scale.setScalar(signScale);
+      // Use the same `pulse` as city lights/rings so sign flashes in sync
+      const signOpacity = prox > 0.1
+        ? Math.min(1, (0.3 + prox * 0.7) * pulse)  // synced with city pulse, wide swing
+        : 0.4;                                        // idle: dim stable
+      z._signMesh.material.opacity = signOpacity;
+      z._signMesh.material.needsUpdate = true;
+    }
+  });
+
+  document.getElementById('enter-hint').classList.toggle('show',!!nearZone&&!panelOpen);
+  if(nearZone&&nearZone!==lastBanner){showBanner(`Entering ${nearZone.name}`);lastBanner=nearZone;}
+  if(!nearZone) lastBanner=null;
+  if(nearZone&&(keys['Enter']||keys[' '])) openPanel(nearZone);
+
+  // 13. Minimap
+  drawMinimap();
+
+  // Slow planet rotate
+  planet.rotation.y+=0.0002;
+}
+
+// ── LOOP ───────────────────────────────────────────────────────────
+var started = false;   // var avoids TDZ if script re-evaluates while rAF is live
+var rafId   = null;
+
+function loop() {
+  rafId = requestAnimationFrame(loop);
+  try { update(); renderer.render(scene, camera); }
+  catch(e) { cancelAnimationFrame(rafId); console.warn('Loop stopped:', e); }
+}
+
+// ── LANDING NAVIGATION ─────────────────────────────────────────────
+
+// fromMenu: true when a panel was opened directly from the landing menu.
+// Used in closePanel()/closeSlideshow() to return to menu instead of 3D world.
+var fromMenu = false;
+
+function showMenu() {
+  const menu = document.getElementById('portfolio-menu');
+  const backBtn = document.getElementById('back-to-menu');
+  
+  // Hide 3D elements when showing menu
+  document.getElementById('c').style.display = 'none';
+  document.getElementById('vignette').style.display = 'none';
+  
+  backBtn.style.display = 'none';
+  menu.style.display = 'flex';
+  requestAnimationFrame(() => { menu.style.opacity = '1'; });
+}
+
+function goInteractive() {
+  const menu = document.getElementById('portfolio-menu');
+  const backBtn = document.getElementById('back-to-menu');
+  
+  // Show 3D world elements
+  document.getElementById('c').style.display = 'block';
+  document.getElementById('vignette').style.display = 'block';
+  
+  menu.style.opacity = '0';
+  setTimeout(() => {
+    menu.style.display = 'none';
+    backBtn.style.display = 'block';
+    startGame();
+  }, 400);
+}
+
+function returnToMenu() {
+  const backBtn = document.getElementById('back-to-menu');
+  const controls = document.getElementById('controls');
+  const enterHint = document.getElementById('enter-hint');
+  const minimap = document.getElementById('minimap');
+  
+  backBtn.style.display = 'none';
+  controls.style.display = 'none';
+  enterHint.style.display = 'none';
+  minimap.style.display = 'none';
+  
+  fromMenu = false;
+  showMenu();
+}
+
+// Called from menu item clicks to open a PDF directly without entering 3D world
+function openPdfDirect(pdfFile) {
+  const zone = ZONES.find(z => z.pdf === pdfFile);
+  if (!zone) return;
+  const menu = document.getElementById('portfolio-menu');
+  
+  // Hide 3D world elements immediately
+  document.getElementById('c').style.display = 'none';
+  document.getElementById('vignette').style.display = 'none';
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('enter-hint').style.display = 'none';
+  document.getElementById('minimap').style.display = 'none';
+  document.getElementById('banner').style.display = 'none';
+  
+  menu.style.opacity = '0';
+  setTimeout(() => { menu.style.display = 'none'; }, 400);
+  fromMenu = true;
+  panelOpen = false;
+  setTimeout(() => { openPanel(zone); }, 420);
+}
+
+// Called from menu to open the Spark slideshow directly without entering 3D world
+function openSlideshowDirect() {
+  const menu = document.getElementById('portfolio-menu');
+  
+  // Hide 3D world elements immediately
+  document.getElementById('c').style.display = 'none';
+  document.getElementById('vignette').style.display = 'none';
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('enter-hint').style.display = 'none';
+  document.getElementById('minimap').style.display = 'none';
+  document.getElementById('banner').style.display = 'none';
+  
+  menu.style.opacity = '0';
+  setTimeout(() => { menu.style.display = 'none'; }, 400);
+  fromMenu = true;
+  panelOpen = false;
+  setTimeout(() => {
+    panelOpen = true;
+    openSlideshow();
+  }, 420);
+}
+
+function startGame() {
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('controls').style.display = '';
+  document.getElementById('enter-hint').style.display = '';
+  document.getElementById('minimap').style.display = '';
+  fromMenu = false;
+  if (!started) {
+    started = true;
+    if (rafId) cancelAnimationFrame(rafId);
+    loop();
+  }
+
+  // Show drive instructions overlay
+  const diOverlay = document.getElementById('drive-instructions');
+  diOverlay.classList.add('show');
+  let diDismissed = false;
+  function dismissInstructions() {
+    if (diDismissed) return;
+    diDismissed = true;
+    diOverlay.classList.remove('show');
+    document.removeEventListener('keydown', onDiKey, { capture: true });
+    document.removeEventListener('click', dismissInstructions);
+  }
+  function onDiKey(e) {
+    dismissInstructions();
+  }
+  setTimeout(() => {
+    document.addEventListener('keydown', onDiKey, { capture: true });
+    document.addEventListener('click', dismissInstructions);
+  }, 300);
+}
+// ── TAG GLOW ANIMATION ─────────────────────────────────────────────
+(function() {
+  const INTERVAL = 600;
+  document.querySelectorAll('.pm-item').forEach(item => {
+    const tags = Array.from(item.querySelectorAll('.pm-tag'));
+    let timer = null, idx = 0;
+    function clearLit() { tags.forEach(t => t.classList.remove('pm-tag--lit')); }
+    function step() { clearLit(); tags[idx].classList.add('pm-tag--lit'); idx = (idx + 1) % tags.length; }
+    item.addEventListener('mouseenter', () => { idx = 0; step(); timer = setInterval(step, INTERVAL); });
+    item.addEventListener('mouseleave', () => { clearInterval(timer); clearLit(); });
+  });
+})();
+</script>
+</body>
+</html>
