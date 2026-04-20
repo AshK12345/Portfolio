@@ -1891,9 +1891,78 @@ function showBanner(txt) {
 // a manual annotation layer to restore clickable links (PDF.js CDN build
 // does not export AnnotationLayer, so links are injected via getAnnotations).
 let _pdfDoc = null, _pdfPage = 1, _pdfZoom = 1.0, _pdfRendering = false;
+const _pdfPageCache = {}; // cache rendered pages as ImageBitmap
+
+function _pdfCachePage(pageNum) {
+  if (!_pdfDoc || _pdfPageCache[pageNum]) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  _pdfDoc.getPage(pageNum).then(page => {
+    const vp = page.getViewport({ scale: _pdfZoom * dpr });
+    const offscreen = document.createElement('canvas');
+    offscreen.width = vp.width;
+    offscreen.height = vp.height;
+    const ctx = offscreen.getContext('2d');
+    page.render({ canvasContext: ctx, viewport: vp }).promise.then(() => {
+      _pdfPageCache[pageNum] = { canvas: offscreen, dpr, zoom: _pdfZoom };
+    });
+  });
+}
+
+function _pdfPreloadAdjacent() {
+  // Preload next 2 and previous 1 pages in background
+  [_pdfPage + 1, _pdfPage + 2, _pdfPage - 1].forEach(n => {
+    if (n >= 1 && n <= _pdfDoc.numPages) _pdfCachePage(n);
+  });
+}
 
 function _pdfRender() {
   if (!_pdfDoc || _pdfRendering) return;
+
+  // If this page is cached at current zoom, paint it instantly
+  const cached = _pdfPageCache[_pdfPage];
+  if (cached && cached.zoom === _pdfZoom) {
+    const canvas = document.getElementById('pdf-canvas');
+    const dpr = cached.dpr;
+    canvas.width  = cached.canvas.width;
+    canvas.height = cached.canvas.height;
+    canvas.style.width  = (cached.canvas.width  / dpr) + 'px';
+    canvas.style.height = (cached.canvas.height / dpr) + 'px';
+    canvas.getContext('2d').drawImage(cached.canvas, 0, 0);
+    document.getElementById('pdf-loading').style.display = 'none';
+    document.getElementById('pdf-page-info').textContent = `${_pdfPage} / ${_pdfDoc.numPages}`;
+    document.getElementById('pdf-prev').disabled = _pdfPage <= 1;
+    document.getElementById('pdf-next').disabled = _pdfPage >= _pdfDoc.numPages;
+    document.getElementById('pdf-zoom-info').textContent = Math.round(_pdfZoom * 100) + '%';
+    // Still need annotations
+    _pdfDoc.getPage(_pdfPage).then(page => {
+      const annotDiv = document.getElementById('pdf-annotation-layer');
+      annotDiv.innerHTML = '';
+      const displayVp = page.getViewport({ scale: _pdfZoom });
+      annotDiv.style.width  = displayVp.width  + 'px';
+      annotDiv.style.height = displayVp.height + 'px';
+      page.getAnnotations({ intent: 'display' }).then(annotations => {
+        annotations.forEach(ann => {
+          if (ann.subtype !== 'Link') return;
+          let url = ann.url || ann.unsafeUrl;
+          if (!url) return;
+          const [x1, y1, x2, y2] = pdfjsLib.Util.normalizeRect(ann.rect);
+          const [sx1, sy1] = displayVp.convertToViewportPoint(x1, y1);
+          const [sx2, sy2] = displayVp.convertToViewportPoint(x2, y2);
+          const a = document.createElement('a');
+          a.href = url; a.target = '_blank';
+          a.style.cssText = [
+            'position:absolute', `left:${Math.min(sx1,sx2)}px`, `top:${Math.min(sy1,sy2)}px`,
+            `width:${Math.abs(sx2-sx1)}px`, `height:${Math.abs(sy2-sy1)}px`,
+            'cursor:pointer', 'display:block',
+          ].join(';');
+          annotDiv.appendChild(a);
+        });
+      });
+    });
+    _pdfPreloadAdjacent();
+    return;
+  }
+
   _pdfRendering = true;
   document.getElementById('pdf-loading').style.display = 'none';
   _pdfDoc.getPage(_pdfPage).then(page => {
@@ -1906,6 +1975,12 @@ function _pdfRender() {
     canvas.style.width  = (vp.width  / dpr) + 'px';
     canvas.style.height = (vp.height / dpr) + 'px';
     page.render({ canvasContext: ctx, viewport: vp }).promise.then(() => {
+      // Store to cache
+      const offscreen = document.createElement('canvas');
+      offscreen.width = canvas.width; offscreen.height = canvas.height;
+      offscreen.getContext('2d').drawImage(canvas, 0, 0);
+      _pdfPageCache[_pdfPage] = { canvas: offscreen, dpr, zoom: _pdfZoom };
+
       _pdfRendering = false;
       document.getElementById('pdf-page-info').textContent =
         `${_pdfPage} / ${_pdfDoc.numPages}`;
@@ -1955,6 +2030,7 @@ function _pdfRender() {
           ].join(';');
           annotDiv.appendChild(a);
         });
+        _pdfPreloadAdjacent();
       });
     }).catch(e => { _pdfRendering = false; console.warn('PDF render error:', e); });
   }).catch(e => { _pdfRendering = false; console.warn('PDF page error:', e); });
@@ -1970,6 +2046,8 @@ function pdfPage(delta) {
 }
 
 function pdfZoom(delta) {
+  // Clear cache on zoom change since cached pages are at old zoom
+  Object.keys(_pdfPageCache).forEach(k => delete _pdfPageCache[k]);
   _pdfZoom = Math.max(0.5, Math.min(3.0, _pdfZoom + delta));
   _pdfRender();
 }
@@ -1977,50 +2055,39 @@ function pdfZoom(delta) {
 // Thumbnail generation and navigation
 function _generateThumbnails(doc) {
   const sidebar = document.getElementById('pdf-sidebar');
-  sidebar.innerHTML = ''; // Clear existing thumbnails
-  
-  const thumbScale = 0.3;
-  const promises = [];
-  
-  for (let i = 1; i <= doc.numPages; i++) {
-    promises.push(
-      doc.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale: thumbScale });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        return page.render({ canvasContext: ctx, viewport }).promise.then(() => {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'pdf-thumb';
-          if (i === _pdfPage) wrapper.classList.add('active');
-          wrapper.dataset.page = i;
-          
-          const label = document.createElement('div');
-          label.className = 'pdf-thumb-label';
-          label.textContent = i;
-          
-          wrapper.appendChild(canvas);
-          wrapper.appendChild(label);
-          
-          wrapper.onclick = () => {
-            _pdfPage = i;
-            _pdfRender();
-            _updateThumbnailActive();
-          };
-          
-          return { page: i, element: wrapper };
-        });
-      })
-    );
+  sidebar.innerHTML = '';
+  const thumbScale = 0.2;
+
+  // Render thumbnails one at a time with a delay so they don't compete
+  // with the main page render on the PDF.js worker
+  let i = 1;
+  function renderNextThumb() {
+    if (i > doc.numPages) return;
+    const pageNum = i++;
+    doc.getPage(pageNum).then(page => {
+      const viewport = page.getViewport({ scale: thumbScale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise.then(() => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pdf-thumb';
+        if (pageNum === _pdfPage) wrapper.classList.add('active');
+        wrapper.dataset.page = pageNum;
+        const label = document.createElement('div');
+        label.className = 'pdf-thumb-label';
+        label.textContent = pageNum;
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(label);
+        wrapper.onclick = () => { _pdfPage = pageNum; _pdfRender(); _updateThumbnailActive(); };
+        sidebar.appendChild(wrapper);
+        // Small delay between thumbs to avoid saturating the worker
+        setTimeout(renderNextThumb, 80);
+      });
+    });
   }
-  
-  Promise.all(promises).then(results => {
-    // Sort by page number and append in order
-    results.sort((a, b) => a.page - b.page);
-    results.forEach(r => sidebar.appendChild(r.element));
-  });
+  // Start after a short delay so page 1 renders first
+  setTimeout(renderNextThumb, 400);
 }
 
 function _updateThumbnailActive() {
