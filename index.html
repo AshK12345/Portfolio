@@ -713,12 +713,92 @@
   }
 
   /* ══════════════════════════════════════════════
-     MOBILE STYLES  (≤ 768 px)
+     MOBILE PDF SCROLL VIEWER
+  ══════════════════════════════════════════════ */
+  #mobile-pdf-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    flex-direction: column;
+    background: #0e0612;
+    opacity: 0; transition: opacity .3s;
+  }
+  #mobile-pdf-overlay.open    { display: flex; }
+  #mobile-pdf-overlay.visible { opacity: 1; }
+
+  #mobile-pdf-header {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: #0e0612;
+    border-bottom: 1px solid var(--mpdf-accent, #ffaa4444);
+    position: relative;
+  }
+  #mobile-pdf-header::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--mpdf-accent, #ffcc44);
+    box-shadow: 0 0 14px var(--mpdf-accent, #ffcc44);
+  }
+  #mobile-pdf-title {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--mpdf-accent, #ffcc44);
+    flex: 1;
+  }
+  #mobile-pdf-page-counter {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; letter-spacing: 1px;
+    color: var(--mpdf-accent, #ffcc44);
+    opacity: 0.55;
+    margin: 0 14px;
+  }
+  #mobile-pdf-close {
+    background: transparent;
+    border: 1.5px solid var(--mpdf-accent, #ffaa4466);
+    color: var(--mpdf-accent, #ffcc44);
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 6px 12px; cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  #mobile-pdf-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 0 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: radial-gradient(ellipse at 50% 20%, #140820 0%, #0e0612 100%);
+  }
+
+  .mobile-pdf-page-wrap {
+    width: calc(100vw - 24px);
+    position: relative;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  }
+  .mobile-pdf-page-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+  }
+  .mobile-pdf-page-label {
+    position: absolute; bottom: 6px; right: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 9px; letter-spacing: 1px;
+    color: var(--mpdf-accent, #ffcc44);
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════════════
+     MOBILE BREAKPOINT  (≤ 768 px)
   ══════════════════════════════════════════════ */
   @media (max-width: 768px) {
 
     /* ── MENU ── */
-    /* Allow the menu to scroll if content is taller than viewport */
     #portfolio-menu {
       overflow-y: auto;
       justify-content: flex-start;
@@ -728,45 +808,21 @@
     .pm-header { margin-bottom: 8px; }
     .pm-name { font-size: clamp(22px, 7vw, 36px); letter-spacing: 2px; }
     .pm-tagline { font-size: 10px; letter-spacing: 2px; }
-
-    /* Tighter cards */
     .pm-item { padding: 16px 16px; }
     .pm-item-title { font-size: clamp(14px, 4vw, 18px); letter-spacing: 1px; }
     .pm-item-sub { font-size: 9px; letter-spacing: 1px; }
-
-    /* Hide tags on mobile — saves a lot of height */
+    /* Hide tags on mobile — saves vertical space */
     .pm-item-tags { display: none; }
-
-    /* Hide the game teaser entirely on mobile */
+    /* Hide the game teaser entirely */
     .pm-interactive-teaser { display: none !important; }
-
-    /* Kill the hover-dim effect (no hover on touch) */
+    /* Kill hover-dim (no hover on touch) */
     #portfolio-menu:has(.pm-item:hover) .pm-item:not(:hover) { opacity: 1; }
 
-    /* ── PDF VIEWER ── */
-    #pdf-topbar {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 10px 12px;
-    }
-    #pdf-zone-name { font-size: 11px; letter-spacing: 2px; }
-    #pdf-controls {
-      width: 100%;
-      gap: 6px;
-      flex-wrap: nowrap;
-      justify-content: flex-end;
-    }
-    /* Hide zoom controls — pinch-to-zoom handles this on mobile */
-    #pdf-zoom-out, #pdf-zoom-in, #pdf-zoom-info { display: none !important; }
-    /* Shrink buttons to icon-size */
-    #pdf-controls .pdf-btn { font-size: 10px; padding: 5px 10px; letter-spacing: 0; }
-    /* Hide sidebar toggle button */
-    .sidebar-toggle { display: none !important; }
-    /* Make PDF canvas area touch-scrollable */
-    #pdf-main-area { overflow: auto; -webkit-overflow-scrolling: touch; }
+    /* ── HIDE the desktop PDF overlay on mobile entirely ── */
+    /* We use #mobile-pdf-overlay instead */
+    #pdf-overlay { display: none !important; }
 
-    /* ── SLIDESHOW VIEWER ── */
+    /* ── SLIDESHOW: slim topbar, hide sidebars & zoom ── */
     #slide-topbar {
       height: auto;
       flex-direction: column;
@@ -776,32 +832,17 @@
     }
     #slide-zone-name { font-size: 11px; letter-spacing: 2px; }
     #slide-top-controls {
-      width: 100%;
-      gap: 6px;
-      flex-wrap: nowrap;
-      justify-content: flex-end;
+      width: 100%; gap: 6px; flex-wrap: nowrap; justify-content: flex-end;
     }
-    /* Hide zoom on slideshow too */
     #slide-zoom-out, #slide-zoom-in, #slide-zoom-info { display: none !important; }
-    .slide-btn { font-size: 10px; padding: 5px 10px; letter-spacing: 0; }
-    /* Slide stage: fill remaining height after the taller topbar */
+    .slide-btn { font-size: 10px; padding: 6px 12px; letter-spacing: 0; }
     #slide-stage {
       width:  min(100vw, calc((100vh - 88px) * 16 / 9));
       height: min(calc(100vh - 88px), calc(100vw * 9 / 16));
     }
-
-    /* ── PDF THUMBNAIL SIDEBAR — hidden on mobile ── */
     #pdf-sidebar, #slide-sidebar { display: none !important; }
-
-    /* ── NAV / SLIDE TUTORIALS — reposition so they don't clip ── */
-    #nav-tutorial, #slide-tutorial {
-      right: auto; left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      font-size: 10px;
-      padding: 10px 16px;
-    }
-    #nav-tutorial::before, #slide-tutorial::before { display: none; }
+    .sidebar-toggle { display: none !important; }
+    #nav-tutorial, #slide-tutorial { display: none !important; }
   }
 
 </style>
@@ -946,6 +987,16 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── MOBILE PDF SCROLL VIEWER ── -->
+<div id="mobile-pdf-overlay">
+  <div id="mobile-pdf-header">
+    <span id="mobile-pdf-title"></span>
+    <span id="mobile-pdf-page-counter"></span>
+    <button id="mobile-pdf-close" onclick="closeMobilePdf()">✕ CLOSE</button>
+  </div>
+  <div id="mobile-pdf-scroll"></div>
 </div>
 
 <!-- ── SLIDESHOW OVERLAY (Spark — Interactive Exhibitions) ── -->
@@ -2904,6 +2955,121 @@ function startGame() {
   const IS_MOBILE = window.matchMedia('(max-width: 768px)').matches;
   if (!IS_MOBILE) return;
 
+  // ── INTERCEPT openPdfDirect ON MOBILE ────────────────────────────
+  // On mobile we skip the desktop PDF overlay and use the scroll viewer instead.
+  const _origOpenPdfDirect = window.openPdfDirect;
+  window.openPdfDirect = function(pdfFile) {
+    const zone = ZONES.find(z => z.pdf === pdfFile);
+    if (!zone) return;
+
+    // Hide menu
+    const menu = document.getElementById('portfolio-menu');
+    document.getElementById('c').style.display = 'none';
+    menu.style.opacity = '0';
+    setTimeout(() => { menu.style.display = 'none'; }, 400);
+
+    openMobilePdf(zone);
+  };
+
+  // ── MOBILE PDF SCROLL VIEWER ──────────────────────────────────────
+  let _mPdfDoc = null;
+  let _mPdfRendering = false;
+
+  window.openMobilePdf = function(zone) {
+    const ov = document.getElementById('mobile-pdf-overlay');
+    ov.style.setProperty('--mpdf-accent', zone.accent);
+    document.getElementById('mobile-pdf-title').textContent = zone.name + ' — ' + zone.subtitle;
+    document.getElementById('mobile-pdf-page-counter').textContent = '';
+    document.getElementById('mobile-pdf-scroll').innerHTML =
+      '<div style="color:' + zone.accent + ';font-family:Courier New,monospace;font-size:12px;letter-spacing:3px;padding:40px 0;text-align:center;">// LOADING...</div>';
+
+    ov.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open', 'visible')));
+
+    if (window.location.protocol === 'file:') {
+      document.getElementById('mobile-pdf-scroll').innerHTML =
+        '<div style="color:#aaa;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">Run via a local server to view PDFs.<br><br>cd to this folder, then:<br><span style="color:' + zone.accent + '">python3 -m http.server 8000</span></div>';
+      return;
+    }
+
+    const base = window.location.href.replace(/\/[^\/]*$/, '/');
+    const pdfUrl = base + zone.pdf;
+    const docPromise = (window._pdfCache && window._pdfCache[zone.pdf])
+      ? window._pdfCache[zone.pdf]
+      : pdfjsLib.getDocument({ url: pdfUrl }).promise;
+
+    docPromise.then(doc => {
+      _mPdfDoc = doc;
+      _renderAllPages(doc, zone.accent);
+    }).catch(err => {
+      document.getElementById('mobile-pdf-scroll').innerHTML =
+        '<div style="color:#f55;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">PDF not found — make sure ' + zone.pdf + ' is in the same folder as this HTML file.</div>';
+    });
+  };
+
+  function _renderAllPages(doc, accent) {
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    scroll.innerHTML = '';
+    const total = doc.numPages;
+    document.getElementById('mobile-pdf-page-counter').textContent = total + ' pages';
+
+    // Use viewport width minus padding to determine render scale
+    const availableWidth = window.innerWidth - 24; // matches CSS calc(100vw - 24px)
+
+    // Render pages sequentially to avoid overwhelming the worker
+    let pageNum = 1;
+    function renderNext() {
+      if (pageNum > total) return;
+      const n = pageNum++;
+      doc.getPage(n).then(page => {
+        // Get the natural PDF page dimensions at scale=1
+        const naturalVp = page.getViewport({ scale: 1 });
+        // Calculate the scale needed to fit availableWidth
+        const scale = availableWidth / naturalVp.width;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const vp = page.getViewport({ scale: scale * dpr });
+
+        const wrap = document.createElement('div');
+        wrap.className = 'mobile-pdf-page-wrap';
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = vp.width;
+        canvas.height = vp.height;
+        // CSS dimensions: actual display size (no DPR scaling)
+        canvas.style.width  = (vp.width  / dpr) + 'px';
+        canvas.style.height = (vp.height / dpr) + 'px';
+
+        const label = document.createElement('div');
+        label.className = 'mobile-pdf-page-label';
+        label.textContent = n + ' / ' + total;
+
+        wrap.appendChild(canvas);
+        wrap.appendChild(label);
+        scroll.appendChild(wrap);
+
+        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(() => {
+          renderNext();
+        });
+      });
+    }
+    renderNext();
+  }
+
+  window.closeMobilePdf = function() {
+    const ov = document.getElementById('mobile-pdf-overlay');
+    ov.classList.remove('visible');
+    setTimeout(() => {
+      ov.classList.remove('open');
+      ov.style.display = 'none';
+      document.getElementById('mobile-pdf-scroll').innerHTML = '';
+      _mPdfDoc = null;
+    }, 320);
+    // Show menu again
+    const menu = document.getElementById('portfolio-menu');
+    menu.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => { menu.style.opacity = '1'; }));
+  };
+
   // ── SWIPE TO NAVIGATE SLIDESHOW ──────────────────────────────────
   (function addSlideSwipe() {
     const stage = document.getElementById('slide-stage-wrap');
@@ -2916,50 +3082,10 @@ function startGame() {
     stage.addEventListener('touchend', e => {
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
-      // Only register horizontal swipes that are more horizontal than vertical
       if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) {
-        // swipe left → next
-        if (typeof sGo === 'function') sGo(1);
-      } else {
-        // swipe right → prev
-        if (typeof sGo === 'function') sGo(-1);
-      }
+      if (typeof sGo === 'function') sGo(dx < 0 ? 1 : -1);
     }, { passive: true });
   })();
-
-  // ── SWIPE TO NAVIGATE PDF ────────────────────────────────────────
-  (function addPdfSwipe() {
-    const wrap = document.getElementById('pdf-canvas-wrap');
-    if (!wrap) return;
-    let startX = 0, startY = 0;
-    wrap.addEventListener('touchstart', e => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    wrap.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) {
-        if (typeof pdfPage === 'function') pdfPage(1);
-      } else {
-        if (typeof pdfPage === 'function') pdfPage(-1);
-      }
-    }, { passive: true });
-  })();
-
-  // ── PDF: render at viewport width, not fixed scale ───────────────
-  // Patch renderPdfPage to use viewport width when on mobile
-  window.addEventListener('load', () => {
-    const origRender = window.renderPdfPage;
-    if (typeof origRender !== 'function') return; // guard
-    window.renderPdfPage = function(...args) {
-      // Let the existing render run; after it resolves the canvas will
-      // be sized correctly since pdfZoom is 1.0 by default.
-      return origRender.apply(this, args);
-    };
-  });
 
 })();
 </script>
