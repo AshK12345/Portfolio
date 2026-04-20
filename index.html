@@ -725,7 +725,7 @@
   #mobile-pdf-overlay.open    { display: flex; }
   #mobile-pdf-overlay.visible { opacity: 1; }
 
-  /* Floating close button — top right, always visible when overlay open */
+  /* Floating close button — top right */
   #mobile-pdf-close {
     position: fixed;
     top: 16px; right: 16px;
@@ -739,10 +739,11 @@
     text-transform: uppercase;
     box-shadow: 0 0 16px rgba(0,0,0,0.6);
     display: none;
+    transition: opacity .3s;
   }
   #mobile-pdf-overlay.open #mobile-pdf-close { display: block; }
 
-  /* Floating title — top left */
+  /* Floating title — top left, fades out after first page scrolls away */
   #mobile-pdf-title {
     position: fixed;
     top: 16px; left: 16px;
@@ -753,58 +754,121 @@
     color: var(--mpdf-accent, #ffcc44);
     background: rgba(10,4,20,0.88);
     padding: 8px 12px;
-    max-width: calc(100vw - 120px);
+    max-width: calc(100vw - 130px);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     display: none;
+    opacity: 1; transition: opacity .4s;
+    pointer-events: none;
   }
   #mobile-pdf-overlay.open #mobile-pdf-title { display: block; }
+  #mobile-pdf-title.faded { opacity: 0; }
 
-  /* Floating page counter — bottom center */
+  /* Floating page counter — top left, below title, also fades */
   #mobile-pdf-page-counter {
     position: fixed;
-    bottom: 24px; left: 50%; transform: translateX(-50%);
+    top: 48px; left: 16px;
     z-index: 400;
     font-family: 'Courier New', monospace;
     font-size: 10px; letter-spacing: 1px;
     color: var(--mpdf-accent, #ffcc44);
     background: rgba(10,4,20,0.75);
-    padding: 5px 14px;
+    padding: 5px 12px;
     display: none;
     white-space: nowrap;
     pointer-events: none;
+    opacity: 1; transition: opacity .4s;
   }
   #mobile-pdf-overlay.open #mobile-pdf-page-counter { display: block; }
+  #mobile-pdf-page-counter.faded { opacity: 0; }
 
   #mobile-pdf-scroll {
     position: fixed;
     inset: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 72px 0 60px; /* top pad clears the floating title; bottom clears page counter */
+    padding: 16px 0 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    background: radial-gradient(ellipse at 50% 20%, #140820 0%, #0e0612 100%);
+    gap: 0;
+    background: #111;
   }
 
   .mobile-pdf-page-wrap {
     position: relative;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
-    /* width is set by the canvas inside — don't force it */
     flex-shrink: 0;
+    width: 100%; /* fills scroll container, canvas inside is centered */
+    display: flex;
+    justify-content: center;
+    background: #111;
+    padding: 6px 0;
   }
-  .mobile-pdf-page-wrap canvas {
+  .mobile-pdf-page-wrap canvas,
+  .mobile-pdf-page-wrap img {
     display: block;
-    /* dimensions set explicitly in JS — do NOT override with CSS */
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
   }
+
+  /* Page number badge — top-left corner of each page, Dropbox-style */
   .mobile-pdf-page-label {
-    position: absolute; bottom: 6px; right: 8px;
+    position: absolute;
+    top: 14px; left: 8px;
     font-family: 'Courier New', monospace;
-    font-size: 9px; letter-spacing: 1px;
-    color: var(--mpdf-accent, #ffcc44);
-    opacity: 0.45;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+    padding: 3px 8px;
+    border-radius: 3px;
     pointer-events: none;
+  }
+
+  /* YouTube embed card for mobile slideshow */
+  .mobile-yt-card {
+    width: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+  }
+  .mobile-yt-thumb {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 */
+    background: #000;
+    overflow: hidden;
+  }
+  .mobile-yt-thumb img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    box-shadow: none !important;
+  }
+  .mobile-yt-play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px; height: 56px;
+    background: rgba(255,0,0,0.9);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .mobile-yt-play::after {
+    content: '';
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 10px 0 10px 20px;
+    border-color: transparent transparent transparent #fff;
+    margin-left: 4px;
+  }
+  .mobile-yt-card a {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #00eebb;
+    text-decoration: none;
+    background: #0a0a0a;
   }
 
   /* ══════════════════════════════════════════════
@@ -2967,113 +3031,40 @@ function startGame() {
   const IS_MOBILE = window.matchMedia('(max-width: 768px)').matches;
   if (!IS_MOBILE) return;
 
-  // ── INTERCEPT openPdfDirect ON MOBILE ────────────────────────────
-  // On mobile we skip the desktop PDF overlay and use the scroll viewer instead.
-  const _origOpenPdfDirect = window.openPdfDirect;
-  window.openPdfDirect = function(pdfFile) {
-    const zone = ZONES.find(z => z.pdf === pdfFile);
-    if (!zone) return;
-
-    // Hide menu
-    const menu = document.getElementById('portfolio-menu');
-    document.getElementById('c').style.display = 'none';
-    menu.style.opacity = '0';
-    setTimeout(() => { menu.style.display = 'none'; }, 400);
-
-    openMobilePdf(zone);
-  };
-
-  // ── MOBILE PDF SCROLL VIEWER ──────────────────────────────────────
-  let _mPdfDoc = null;
-  let _mPdfRendering = false;
-
-  window.openMobilePdf = function(zone) {
-    const ov = document.getElementById('mobile-pdf-overlay');
-    ov.style.setProperty('--mpdf-accent', zone.accent);
-    document.getElementById('mobile-pdf-title').textContent = zone.name + ' — ' + zone.subtitle;
-    document.getElementById('mobile-pdf-page-counter').textContent = '';
-    document.getElementById('mobile-pdf-scroll').innerHTML =
-      '<div style="color:' + zone.accent + ';font-family:Courier New,monospace;font-size:12px;letter-spacing:3px;padding:40px 0;text-align:center;">// LOADING...</div>';
-
+  // ── SHARED OVERLAY OPEN/CLOSE ─────────────────────────────────────
+  function _openOverlay(accentColor, titleText) {
+    const ov  = document.getElementById('mobile-pdf-overlay');
+    const ttl = document.getElementById('mobile-pdf-title');
+    const ctr = document.getElementById('mobile-pdf-page-counter');
+    ov.style.setProperty('--mpdf-accent', accentColor);
+    ttl.textContent = titleText;
+    ttl.classList.remove('faded');
+    ctr.textContent = '';
+    ctr.classList.remove('faded');
     ov.style.display = 'flex';
     requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open', 'visible')));
-
-    if (window.location.protocol === 'file:') {
-      document.getElementById('mobile-pdf-scroll').innerHTML =
-        '<div style="color:#aaa;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">Run via a local server to view PDFs.<br><br>cd to this folder, then:<br><span style="color:' + zone.accent + '">python3 -m http.server 8000</span></div>';
-      return;
-    }
-
-    const base = window.location.href.replace(/\/[^\/]*$/, '/');
-    const pdfUrl = base + zone.pdf;
-    const docPromise = (window._pdfCache && window._pdfCache[zone.pdf])
-      ? window._pdfCache[zone.pdf]
-      : pdfjsLib.getDocument({ url: pdfUrl }).promise;
-
-    docPromise.then(doc => {
-      _mPdfDoc = doc;
-      _renderAllPages(doc, zone.accent);
-    }).catch(err => {
-      document.getElementById('mobile-pdf-scroll').innerHTML =
-        '<div style="color:#f55;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">PDF not found — make sure ' + zone.pdf + ' is in the same folder as this HTML file.</div>';
-    });
-  };
-
-  function _renderAllPages(doc, accent) {
+    // Fade title + counter after user scrolls past the first ~120px
     const scroll = document.getElementById('mobile-pdf-scroll');
-    scroll.innerHTML = '';
-    const total = doc.numPages;
-    document.getElementById('mobile-pdf-page-counter').textContent = total + ' pages';
+    scroll.scrollTop = 0;
+    scroll.addEventListener('scroll', _onScrollFade, { passive: true });
+  }
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const availableWidth = window.innerWidth - 24; // CSS display width for each page
-
-    let pageNum = 1;
-    function renderNext() {
-      if (pageNum > total) return;
-      const n = pageNum++;
-      doc.getPage(n).then(page => {
-        const naturalVp = page.getViewport({ scale: 1 });
-        // CSS display dimensions: fit width to availableWidth, height proportional
-        const cssWidth  = availableWidth;
-        const cssHeight = Math.round(availableWidth * naturalVp.height / naturalVp.width);
-        // Physical pixel dimensions for sharp rendering on retina
-        const scale = (cssWidth / naturalVp.width) * dpr;
-        const vp = page.getViewport({ scale });
-
-        const wrap = document.createElement('div');
-        wrap.className = 'mobile-pdf-page-wrap';
-
-        const canvas = document.createElement('canvas');
-        canvas.width  = vp.width;   // physical pixels
-        canvas.height = vp.height;
-        // Explicit CSS size — matches the natural page proportions
-        canvas.style.width  = cssWidth  + 'px';
-        canvas.style.height = cssHeight + 'px';
-        canvas.style.display = 'block';
-
-        const label = document.createElement('div');
-        label.className = 'mobile-pdf-page-label';
-        label.textContent = n + ' / ' + total;
-
-        wrap.appendChild(canvas);
-        wrap.appendChild(label);
-        scroll.appendChild(wrap);
-
-        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(renderNext);
-      });
-    }
-    renderNext();
+  function _onScrollFade() {
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    const faded = scroll.scrollTop > 100;
+    document.getElementById('mobile-pdf-title').classList.toggle('faded', faded);
+    document.getElementById('mobile-pdf-page-counter').classList.toggle('faded', faded);
   }
 
   window.closeMobilePdf = function() {
     const ov = document.getElementById('mobile-pdf-overlay');
     ov.classList.remove('visible');
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    scroll.removeEventListener('scroll', _onScrollFade);
     setTimeout(() => {
       ov.classList.remove('open');
       ov.style.display = 'none';
-      document.getElementById('mobile-pdf-scroll').innerHTML = '';
-      _mPdfDoc = null;
+      scroll.innerHTML = '';
     }, 320);
     _showMenuAgain();
   };
@@ -3084,75 +3075,167 @@ function startGame() {
     requestAnimationFrame(() => requestAnimationFrame(() => { menu.style.opacity = '1'; }));
   }
 
-  // ── INTERCEPT openSlideshowDirect ON MOBILE ───────────────────────
-  // Replace the slideshow with a headerless full-screen image scroll,
-  // matching the PDF scroll experience.
-  const _origOpenSlideshowDirect = window.openSlideshowDirect;
-  window.openSlideshowDirect = function() {
+  function _hideMenu() {
     const menu = document.getElementById('portfolio-menu');
     document.getElementById('c').style.display = 'none';
     menu.style.opacity = '0';
     setTimeout(() => { menu.style.display = 'none'; }, 400);
-    openMobileSlideshow();
-  };
+  }
 
-  window.openMobileSlideshow = function() {
-    const ov = document.getElementById('mobile-pdf-overlay');
-    // Re-use the same mobile overlay with Spark's teal accent
-    ov.style.setProperty('--mpdf-accent', '#00eebb');
-    document.getElementById('mobile-pdf-title').textContent = 'Spark — Interactive Installations';
-    document.getElementById('mobile-pdf-page-counter').textContent = '';
+  // ── PAGE NUMBER LABEL (Dropbox style: "N of Total") ───────────────
+  function _makePageLabel(n, total) {
+    const label = document.createElement('div');
+    label.className = 'mobile-pdf-page-label';
+    label.textContent = n + ' of ' + total;
+    return label;
+  }
+
+  // ── PDF SCROLL VIEWER ─────────────────────────────────────────────
+  window.openPdfDirect = function(pdfFile) {
+    const zone = ZONES.find(z => z.pdf === pdfFile);
+    if (!zone) return;
+    _hideMenu();
 
     const scroll = document.getElementById('mobile-pdf-scroll');
-    scroll.innerHTML = '<div style="color:#00eebb;font-family:Courier New,monospace;font-size:12px;letter-spacing:3px;padding:40px 0;text-align:center;">// LOADING...</div>';
+    scroll.innerHTML = '<div style="color:' + zone.accent + ';font-family:Courier New,monospace;font-size:12px;letter-spacing:3px;padding:60px 0;text-align:center;">// LOADING...</div>';
+    _openOverlay(zone.accent, zone.name + ' — ' + zone.subtitle);
 
-    ov.style.display = 'flex';
-    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open', 'visible')));
+    if (window.location.protocol === 'file:') {
+      scroll.innerHTML = '<div style="color:#aaa;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">Run via a local server to view PDFs.<br><br><span style="color:' + zone.accent + '">python3 -m http.server 8000</span></div>';
+      return;
+    }
 
-    // Pull slide images from the existing .sslide-bg elements
-    const slides = document.querySelectorAll('.sslide-bg');
+    const base = window.location.href.replace(/\/[^\/]*$/, '/');
+    const docPromise = (window._pdfCache && window._pdfCache[zone.pdf])
+      ? window._pdfCache[zone.pdf]
+      : pdfjsLib.getDocument({ url: base + zone.pdf }).promise;
+
+    docPromise.then(doc => _renderPdfPages(doc, zone.accent))
+      .catch(() => {
+        scroll.innerHTML = '<div style="color:#f55;font-family:Courier New,monospace;font-size:11px;padding:40px 24px;text-align:center;">PDF not found — make sure ' + zone.pdf + ' is in the same folder.</div>';
+      });
+  };
+
+  function _renderPdfPages(doc, accent) {
+    const scroll = document.getElementById('mobile-pdf-scroll');
     scroll.innerHTML = '';
-    document.getElementById('mobile-pdf-page-counter').textContent = slides.length + ' slides';
+    const total = doc.numPages;
+    document.getElementById('mobile-pdf-page-counter').textContent = total + ' pages';
 
-    slides.forEach((img, i) => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const viewportW = window.innerWidth;
+
+    // ── DROPBOX BEHAVIOUR: find the widest page first, ────────────────
+    // then render ALL pages at that same scale so narrower pages appear
+    // smaller (letter-boxed with background) rather than stretched.
+    let maxPdfWidth = 0;
+    const pagePromises = [];
+    for (let i = 1; i <= total; i++) {
+      pagePromises.push(doc.getPage(i).then(p => {
+        const vp = p.getViewport({ scale: 1 });
+        if (vp.width > maxPdfWidth) maxPdfWidth = vp.width;
+        return p;
+      }));
+    }
+
+    Promise.all(pagePromises).then(pages => {
+      // scale so the widest page fills the viewport width (minus 0px padding — full bleed)
+      const baseScale = viewportW / maxPdfWidth;
+
+      let idx = 0;
+      function renderNext() {
+        if (idx >= pages.length) return;
+        const page = pages[idx++];
+        const n = idx; // 1-based
+
+        const naturalVp = page.getViewport({ scale: 1 });
+        const cssWidth  = Math.round(naturalVp.width  * baseScale);
+        const cssHeight = Math.round(naturalVp.height * baseScale);
+        const renderScale = baseScale * dpr;
+        const vp = page.getViewport({ scale: renderScale });
+
+        const wrap = document.createElement('div');
+        wrap.className = 'mobile-pdf-page-wrap';
+        // Centre narrower pages; background fills the column
+        wrap.style.width    = viewportW + 'px';
+        wrap.style.display  = 'flex';
+        wrap.style.justifyContent = 'center';
+        wrap.style.alignItems     = 'flex-start';
+        wrap.style.position = 'relative';
+        wrap.style.background = '#111';
+        wrap.style.paddingTop    = '6px';
+        wrap.style.paddingBottom = '6px';
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = vp.width;
+        canvas.height = vp.height;
+        canvas.style.width   = cssWidth  + 'px';
+        canvas.style.height  = cssHeight + 'px';
+        canvas.style.display = 'block';
+        canvas.style.boxShadow = '0 2px 16px rgba(0,0,0,0.6)';
+
+        const label = _makePageLabel(n, total);
+        wrap.appendChild(canvas);
+        wrap.appendChild(label);
+        scroll.appendChild(wrap);
+
+        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(renderNext);
+      }
+      renderNext();
+    });
+  }
+
+  // ── INSTALLATIONS SCROLL VIEWER ───────────────────────────────────
+  window.openSlideshowDirect = function() {
+    _hideMenu();
+
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    scroll.innerHTML = '';
+    _openOverlay('#00eebb', 'Spark — Interactive Installations');
+
+    const sslides = document.querySelectorAll('.sslide');
+    const total = sslides.length;
+    document.getElementById('mobile-pdf-page-counter').textContent = total + ' slides';
+
+    sslides.forEach((slide, i) => {
       const wrap = document.createElement('div');
       wrap.className = 'mobile-pdf-page-wrap';
+      wrap.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;background:#0a0a0a;padding:6px 0;';
 
-      const image = document.createElement('img');
-      image.src = img.src;
-      image.alt = img.alt || ('Slide ' + (i + 1));
-      image.style.cssText = 'display:block;width:100%;height:auto;';
+      // Background slide image
+      const bgImg = slide.querySelector('.sslide-bg');
+      if (bgImg) {
+        const img = document.createElement('img');
+        img.src = bgImg.src;
+        img.alt = bgImg.alt || ('Slide ' + (i + 1));
+        img.style.cssText = 'display:block;width:100%;height:auto;';
+        wrap.appendChild(img);
+      }
 
-      const label = document.createElement('div');
-      label.className = 'mobile-pdf-page-label';
-      label.textContent = (i + 1) + ' / ' + slides.length;
+      // YouTube embeds — extract video IDs from iframes in this slide
+      const iframes = slide.querySelectorAll('iframe[src*="youtube"]');
+      iframes.forEach(iframe => {
+        const match = iframe.src.match(/embed\/([^?&"]+)/);
+        if (!match) return;
+        const videoId = match[1];
 
-      wrap.appendChild(image);
+        const embedWrap = document.createElement('div');
+        embedWrap.style.cssText = 'width:100%;position:relative;padding-bottom:56.25%;background:#000;margin-top:4px;';
+        const embedFrame = document.createElement('iframe');
+        embedFrame.src = 'https://www.youtube.com/embed/' + videoId;
+        embedFrame.setAttribute('frameborder', '0');
+        embedFrame.setAttribute('allowfullscreen', '');
+        embedFrame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        embedFrame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
+        embedWrap.appendChild(embedFrame);
+        wrap.appendChild(embedWrap);
+      });
+
+      const label = _makePageLabel(i + 1, total);
       wrap.appendChild(label);
       scroll.appendChild(wrap);
     });
   };
-
-  // closeMobilePdf already handles the overlay teardown + menu restore,
-  // so the slideshow close button reuses it automatically.
-
-  // ── SWIPE LEFT/RIGHT still works in the desktop slide overlay ────
-  // (kept in case someone opens it on a wider phone in landscape)
-  (function addSlideSwipe() {
-    const stage = document.getElementById('slide-stage-wrap');
-    if (!stage) return;
-    let startX = 0, startY = 0;
-    stage.addEventListener('touchstart', e => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    stage.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-      if (typeof sGo === 'function') sGo(dx < 0 ? 1 : -1);
-    }, { passive: true });
-  })();
 
 })();
 </script>
