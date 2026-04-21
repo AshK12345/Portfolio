@@ -3227,7 +3227,6 @@ function startGame() {
     _openOverlay('#00eebb', 'Spark — Interactive Installations');
 
     const scroll = document.getElementById('mobile-pdf-scroll');
-    // Clear any previous content but keep title row
     Array.from(scroll.children).forEach(c => { if (c.id !== 'mobile-pdf-title') c.remove(); });
 
     const sslides = document.querySelectorAll('.sslide');
@@ -3238,36 +3237,53 @@ function startGame() {
       const wrap = document.createElement('div');
       wrap.className = 'mobile-pdf-page-wrap';
       wrap.dataset.page = i + 1;
-      wrap.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;background:#0a0a0a;padding:6px 0;position:relative;';
+      // The inner stage is position:relative so iframes can be absolutely placed on top of the image
+      wrap.style.cssText = 'width:100%;background:#0a0a0a;padding:6px 0 0;';
 
-      // Background slide image
       const bgImg = slide.querySelector('.sslide-bg');
       if (bgImg) {
+        // Stage: position:relative, width 100%, height = 56.25vw (16:9)
+        // All percentage coords from svideo-slot are relative to this box
+        const stage = document.createElement('div');
+        stage.style.cssText = 'position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;';
+
         const img = document.createElement('img');
         img.src = bgImg.src;
         img.alt = bgImg.alt || ('Slide ' + (i + 1));
-        img.style.cssText = 'display:block;width:100%;height:auto;';
-        wrap.appendChild(img);
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
+        stage.appendChild(img);
+
+        // Overlay each video at its exact desktop percentage position
+        const slots = slide.querySelectorAll('.svideo-slot');
+        slots.forEach(slot => {
+          const s = slot.style;
+          const iframe = slot.querySelector('iframe');
+          if (!iframe) return;
+          const match = iframe.src.match(/embed\/([^?&"]+)/);
+          if (!match) return;
+
+          const overlay = document.createElement('div');
+          overlay.style.cssText = [
+            'position:absolute',
+            'left:'   + s.left,
+            'top:'    + s.top,
+            'width:'  + s.width,
+            'height:' + s.height,
+            'overflow:hidden',
+          ].join(';');
+
+          const embedFrame = document.createElement('iframe');
+          embedFrame.src = 'https://www.youtube.com/embed/' + match[1];
+          embedFrame.setAttribute('frameborder', '0');
+          embedFrame.setAttribute('allowfullscreen', '');
+          embedFrame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+          embedFrame.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+          overlay.appendChild(embedFrame);
+          stage.appendChild(overlay);
+        });
+
+        wrap.appendChild(stage);
       }
-
-      // YouTube embeds — extract video IDs from iframes in this slide
-      const iframes = slide.querySelectorAll('iframe[src*="youtube"]');
-      iframes.forEach(iframe => {
-        const match = iframe.src.match(/embed\/([^?&"]+)/);
-        if (!match) return;
-        const videoId = match[1];
-
-        const embedWrap = document.createElement('div');
-        embedWrap.style.cssText = 'width:100%;position:relative;padding-bottom:56.25%;background:#000;margin-top:4px;';
-        const embedFrame = document.createElement('iframe');
-        embedFrame.src = 'https://www.youtube.com/embed/' + videoId;
-        embedFrame.setAttribute('frameborder', '0');
-        embedFrame.setAttribute('allowfullscreen', '');
-        embedFrame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
-        embedFrame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
-        embedWrap.appendChild(embedFrame);
-        wrap.appendChild(embedWrap);
-      });
 
       scroll.appendChild(wrap);
     });
