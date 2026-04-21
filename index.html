@@ -3046,7 +3046,7 @@ function startGame() {
   window.closeMobilePdf = function() {
     const ov = document.getElementById('mobile-pdf-overlay');
     ov.classList.remove('visible');
-    if (_pageObserver) { _pageObserver.disconnect(); _pageObserver = null; }
+    if (_pageObserver) { _pageObserver(); _pageObserver = null; }
     const scroll = document.getElementById('mobile-pdf-scroll');
     setTimeout(() => {
       ov.classList.remove('open');
@@ -3083,21 +3083,28 @@ function startGame() {
     const pill = document.getElementById('mobile-page-pill');
     pill.textContent = '1 of ' + total;
 
-    if (_pageObserver) _pageObserver.disconnect();
+    if (_pageObserver) { _pageObserver(); _pageObserver = null; }
 
-    // Small delay so pages have been appended before we observe
-    setTimeout(() => {
-      const wraps = document.querySelectorAll('#mobile-pdf-scroll .mobile-pdf-page-wrap[data-page]');
-      _pageObserver = new IntersectionObserver(entries => {
-        let best = null, bestRatio = 0;
-        entries.forEach(e => {
-          if (e.intersectionRatio > bestRatio) { bestRatio = e.intersectionRatio; best = e.target; }
-        });
-        if (best) pill.textContent = best.dataset.page + ' of ' + _pageTotal;
-      }, { threshold: Array.from({ length: 21 }, (_, i) => i / 20) });
+    const scroll = document.getElementById('mobile-pdf-scroll');
+    const scrollRect = scroll.getBoundingClientRect();
+    // The trigger line is 30% down from the top of the scroll container
+    const triggerY = scrollRect.top + scroll.clientHeight * 0.3;
 
-      wraps.forEach(w => _pageObserver.observe(w));
-    }, 200);
+    function _onPillScroll() {
+      // Query live each time — handles pages that rendered after init
+      const wraps = scroll.querySelectorAll('.mobile-pdf-page-wrap[data-page]');
+      if (!wraps.length) return;
+      let current = 1;
+      for (const w of wraps) {
+        const top = w.getBoundingClientRect().top;
+        if (top <= triggerY) current = parseInt(w.dataset.page);
+        else break;
+      }
+      pill.textContent = current + ' of ' + _pageTotal;
+    }
+
+    scroll.addEventListener('scroll', _onPillScroll, { passive: true });
+    _pageObserver = () => scroll.removeEventListener('scroll', _onPillScroll);
   }
 
   function _makePageLabel(n, total) {
@@ -3167,9 +3174,8 @@ function startGame() {
     }
 
     Promise.all(pagePromises).then(pages => {
-      // scale so the widest page fills the viewport width (minus 0px padding — full bleed)
       const baseScale = viewportW / maxPdfWidth;
-      _initPagePill(total);
+      let pillInited = false;
 
       let idx = 0;
       function renderNext() {
@@ -3186,7 +3192,6 @@ function startGame() {
         const wrap = document.createElement('div');
         wrap.className = 'mobile-pdf-page-wrap';
         wrap.dataset.page = n;
-        // Centre narrower pages; background fills the column
         wrap.style.width    = viewportW + 'px';
         wrap.style.display  = 'flex';
         wrap.style.justifyContent = 'center';
@@ -3206,6 +3211,9 @@ function startGame() {
 
         wrap.appendChild(canvas);
         scroll.appendChild(wrap);
+
+        // Init pill after first page is in the DOM so getBoundingClientRect works
+        if (!pillInited) { pillInited = true; _initPagePill(total); }
 
         page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(renderNext);
       }
