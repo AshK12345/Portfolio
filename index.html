@@ -798,18 +798,22 @@
     box-shadow: 0 2px 12px rgba(0,0,0,0.5);
   }
 
-  /* Page number badge — top-left corner of each page, Dropbox-style */
-  .mobile-pdf-page-label {
-    position: absolute;
-    top: 14px; left: 8px;
+  /* Single fixed page counter pill — top left, updates as you scroll (Dropbox style) */
+  #mobile-page-pill {
+    position: fixed;
+    top: 20px; left: 16px;
+    z-index: 401;
     font-family: 'Courier New', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+    font-size: 14px; font-weight: 900; letter-spacing: 0.5px;
     color: #fff;
-    background: rgba(0,0,0,0.55);
-    padding: 3px 8px;
-    border-radius: 3px;
+    background: rgba(0,0,0,0.72);
+    padding: 6px 13px;
+    border-radius: 6px;
+    display: none;
     pointer-events: none;
+    white-space: nowrap;
   }
+  #mobile-pdf-overlay.open #mobile-page-pill { display: block; }
 
   /* YouTube embed card for mobile slideshow */
   .mobile-yt-card {
@@ -1059,6 +1063,7 @@
 <!-- ── MOBILE PDF SCROLL VIEWER ── -->
 <div id="mobile-pdf-overlay">
   <button id="mobile-pdf-close" onclick="closeMobilePdf()">✕ CLOSE</button>
+  <div id="mobile-page-pill">1 of 1</div>
   <div id="mobile-pdf-scroll">
     <div id="mobile-pdf-title">
       <span class="mpdf-section-name"></span>
@@ -3041,6 +3046,7 @@ function startGame() {
   window.closeMobilePdf = function() {
     const ov = document.getElementById('mobile-pdf-overlay');
     ov.classList.remove('visible');
+    if (_pageObserver) { _pageObserver.disconnect(); _pageObserver = null; }
     const scroll = document.getElementById('mobile-pdf-scroll');
     setTimeout(() => {
       ov.classList.remove('open');
@@ -3066,12 +3072,37 @@ function startGame() {
     setTimeout(() => { menu.style.display = 'none'; }, 400);
   }
 
-  // ── PAGE NUMBER LABEL (Dropbox style: "N of Total") ───────────────
+  // ── SINGLE FIXED PAGE PILL (Dropbox style) ───────────────────────
+  // One IntersectionObserver watches all .mobile-pdf-page-wrap elements.
+  // Whichever one is most visible sets the pill text.
+  let _pageObserver = null;
+  let _pageTotal = 1;
+
+  function _initPagePill(total) {
+    _pageTotal = total;
+    const pill = document.getElementById('mobile-page-pill');
+    pill.textContent = '1 of ' + total;
+
+    if (_pageObserver) _pageObserver.disconnect();
+
+    // Small delay so pages have been appended before we observe
+    setTimeout(() => {
+      const wraps = document.querySelectorAll('#mobile-pdf-scroll .mobile-pdf-page-wrap[data-page]');
+      _pageObserver = new IntersectionObserver(entries => {
+        let best = null, bestRatio = 0;
+        entries.forEach(e => {
+          if (e.intersectionRatio > bestRatio) { bestRatio = e.intersectionRatio; best = e.target; }
+        });
+        if (best) pill.textContent = best.dataset.page + ' of ' + _pageTotal;
+      }, { threshold: Array.from({ length: 21 }, (_, i) => i / 20) });
+
+      wraps.forEach(w => _pageObserver.observe(w));
+    }, 200);
+  }
+
   function _makePageLabel(n, total) {
-    const label = document.createElement('div');
-    label.className = 'mobile-pdf-page-label';
-    label.textContent = n + ' of ' + total;
-    return label;
+    // No-op — we use the single fixed pill instead of per-page badges
+    return null;
   }
 
   // ── PDF SCROLL VIEWER ─────────────────────────────────────────────
@@ -3138,6 +3169,7 @@ function startGame() {
     Promise.all(pagePromises).then(pages => {
       // scale so the widest page fills the viewport width (minus 0px padding — full bleed)
       const baseScale = viewportW / maxPdfWidth;
+      _initPagePill(total);
 
       let idx = 0;
       function renderNext() {
@@ -3153,6 +3185,7 @@ function startGame() {
 
         const wrap = document.createElement('div');
         wrap.className = 'mobile-pdf-page-wrap';
+        wrap.dataset.page = n;
         // Centre narrower pages; background fills the column
         wrap.style.width    = viewportW + 'px';
         wrap.style.display  = 'flex';
@@ -3171,9 +3204,7 @@ function startGame() {
         canvas.style.display = 'block';
         canvas.style.boxShadow = '0 2px 16px rgba(0,0,0,0.6)';
 
-        const label = _makePageLabel(n, total);
         wrap.appendChild(canvas);
-        wrap.appendChild(label);
         scroll.appendChild(wrap);
 
         page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(renderNext);
@@ -3198,7 +3229,8 @@ function startGame() {
     sslides.forEach((slide, i) => {
       const wrap = document.createElement('div');
       wrap.className = 'mobile-pdf-page-wrap';
-      wrap.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;background:#0a0a0a;padding:6px 0;';
+      wrap.dataset.page = i + 1;
+      wrap.style.cssText = 'width:100%;display:flex;flex-direction:column;align-items:center;background:#0a0a0a;padding:6px 0;position:relative;';
 
       // Background slide image
       const bgImg = slide.querySelector('.sslide-bg');
@@ -3229,10 +3261,10 @@ function startGame() {
         wrap.appendChild(embedWrap);
       });
 
-      const label = _makePageLabel(i + 1, total);
-      wrap.appendChild(label);
       scroll.appendChild(wrap);
     });
+
+    _initPagePill(total);
   };
 
 })();
