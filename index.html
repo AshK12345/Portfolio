@@ -37,7 +37,7 @@
     margin-bottom:6px;
   }
   .pm-tagline {
-    color:#c8aa88; font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    color:#d4b896; font-size:12px; letter-spacing:3px; text-transform:uppercase;
     font-family:'Courier New',monospace;
   }
 
@@ -68,11 +68,11 @@
     letter-spacing:2px; text-transform:uppercase;
   }
   .pm-item-sub {
-    font-size:10px; letter-spacing:2px; text-transform:uppercase;
-    opacity:0.85; color:#ddd;
+    font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:#e8e8e8;
   }
   .pm-item-arrow {
-    font-size:18px; opacity:0.55; transition:opacity .18s, transform .18s;
+    font-size:18px; opacity:0.75; transition:opacity .18s, transform .18s;
     margin-left:16px; margin-top:4px; flex-shrink:0;
   }
   .pm-item:hover .pm-item-arrow { opacity:0.9; transform:translateX(4px); }
@@ -93,8 +93,8 @@
   /* Tags */
   .pm-item-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
   .pm-tag {
-    font-size:8px; letter-spacing:1.2px; text-transform:uppercase;
-    padding:3px 8px; border:1px solid #555; color:#aaa;
+    font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
+    padding:3px 8px; border:1px solid #666; color:#ccc;
     font-family:'Courier New',monospace;
     transition:color .25s, border-color .25s, text-shadow .25s, background .25s;
   }
@@ -154,13 +154,13 @@
   .pm-teaser-text { display:flex; flex-direction:column; gap:4px; flex:1; }
   .pm-teaser-headline {
     font-size:12px; font-weight:700; letter-spacing:1.5px;
-    color:#c49a52; text-transform:uppercase;  /* ~5.1:1 on #0a0a0a */
+    color:#d4aa62; text-transform:uppercase;
   }
   .pm-teaser-note {
-    font-size:10px; letter-spacing:1px; color:#aaa; text-transform:uppercase; /* ~7:1 on #0a0a0a */
+    font-size:11px; letter-spacing:1px; color:#ccc; text-transform:uppercase;
   }
   .pm-teaser-arrow {
-    font-size:14px; color:#c49a52;
+    font-size:14px; color:#d4aa62;
     transition:transform .2s;
   }
   .pm-interactive-teaser:hover .pm-teaser-arrow,
@@ -878,10 +878,10 @@
     }
     .pm-header { margin-bottom: 8px; }
     .pm-name { font-size: clamp(22px, 7vw, 36px); letter-spacing: 2px; }
-    .pm-tagline { font-size: 10px; letter-spacing: 2px; }
+    .pm-tagline { font-size: 12px; letter-spacing: 2px; }
     .pm-item { padding: 16px 16px; }
     .pm-item-title { font-size: clamp(14px, 4vw, 18px); letter-spacing: 1px; }
-    .pm-item-sub { font-size: 9px; letter-spacing: 1px; }
+    .pm-item-sub { font-size: 11px; letter-spacing: 1px; }
     /* Hide tags on mobile — saves vertical space */
     .pm-item-tags { display: none; }
     /* Hide the game teaser entirely */
