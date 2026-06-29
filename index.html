@@ -2355,6 +2355,9 @@ function openPanel(zone) {
 
   // Reset state
   _pdfDoc = null; _pdfPage = 1; _pdfZoom = 1.0; _pdfRendering = false;
+  // Clear the per-page render cache — it's keyed by page number only, so
+  // without this a new PDF would reuse the previous PDF's cached page 1.
+  Object.keys(_pdfPageCache).forEach(k => delete _pdfPageCache[k]);
   const canvas = document.getElementById('pdf-canvas');
   canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
   const pdfSidebar = document.getElementById('pdf-sidebar');
