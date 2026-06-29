@@ -1222,10 +1222,38 @@
   // _pdfCache: prefetch cache — stores the PDF.js document promise keyed by filename.
   // Populated on page load so openPanel() gets an already-resolved promise.
   const _pdfCache = {};
+  // _warmFirstPage: pre-rendered page-1 canvas per PDF, keyed by filename.
+  // openPanel() seeds these into the page-render cache so the first click
+  // paints instantly instead of rasterizing on demand.
+  const _warmFirstPage = {};
+
+  // Rasterize page 1 of an already-parsed doc into an offscreen canvas so it's
+  // ready to paint the moment the user opens that portfolio.
+  function _warmRenderFirstPage(filename, doc) {
+    doc.getPage(1).then(page => {
+      const dpr = window.devicePixelRatio || 1;
+      const vp = page.getViewport({ scale: 1.0 * dpr });
+      const off = document.createElement('canvas');
+      off.width = vp.width; off.height = vp.height;
+      page.render({ canvasContext: off.getContext('2d'), viewport: vp }).promise
+        .then(() => { _warmFirstPage[filename] = { canvas: off, dpr, zoom: 1.0 }; })
+        .catch(() => {});
+    }).catch(() => {});
+  }
+
   function _prefetchPdf(filename) {
     const base = window.location.href.replace(/\/[^\/]*$/, '/');
-    _pdfCache[filename] = pdfjsLib.getDocument({ url: base + filename }).promise;
+    // Download the WHOLE file in one request (fetch -> ArrayBuffer), then parse.
+    // Passing bytes directly avoids pdf.js's default trickle of HTTP range
+    // requests, so the file is fully local before the user ever clicks — and the
+    // network settles in one clean request instead of staying intermittently busy.
+    const p = fetch(base + filename)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(buf => pdfjsLib.getDocument({ data: buf }).promise);
+    _pdfCache[filename] = p;
+    p.then(doc => _warmRenderFirstPage(filename, doc)).catch(() => {});
   }
+
   // Start fetching + parsing immediately. Waiting for the window 'load' event
   // would queue these behind every image on the page (incl. the 25 slide PNGs),
   // so the Industrial PDF wouldn't even begin downloading until everything else
@@ -2358,6 +2386,9 @@ function openPanel(zone) {
   // Clear the per-page render cache — it's keyed by page number only, so
   // without this a new PDF would reuse the previous PDF's cached page 1.
   Object.keys(_pdfPageCache).forEach(k => delete _pdfPageCache[k]);
+  // Seed page 1 from the warm cache rendered at site load, so the first open
+  // paints immediately. _pdfRender() will find it cached at zoom 1.0 and draw it.
+  if (_warmFirstPage[zone.pdf]) _pdfPageCache[1] = _warmFirstPage[zone.pdf];
   const canvas = document.getElementById('pdf-canvas');
   canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
   const pdfSidebar = document.getElementById('pdf-sidebar');
